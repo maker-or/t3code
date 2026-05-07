@@ -11,9 +11,9 @@ const ACTIVE_PROJECT_ICON_COLOR_SETS = [
 ] as const;
 
 const INACTIVE_PROJECT_ICON_COLORS = {
-  primary: "#6E736B",
-  secondary: "#353937",
-  text: "#878D81",
+  primary: "#222523",
+  secondary: "#0B0E14",
+  text: "#3A3A3A",
 } as const;
 
 function initialsForProject(value: string): string {
@@ -29,12 +29,16 @@ function initialsForProject(value: string): string {
   return (parts[0] ?? value).slice(0, 2).toUpperCase();
 }
 
-function activeColorSetForProject(value: string): (typeof ACTIVE_PROJECT_ICON_COLOR_SETS)[number] {
+function activeColorSetForProject(
+  value: string,
+): (typeof ACTIVE_PROJECT_ICON_COLOR_SETS)[number] {
   let hash = 0;
   for (let index = 0; index < value.length; index++) {
     hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
   }
-  return ACTIVE_PROJECT_ICON_COLOR_SETS[hash % ACTIVE_PROJECT_ICON_COLOR_SETS.length]!;
+  return ACTIVE_PROJECT_ICON_COLOR_SETS[
+    hash % ACTIVE_PROJECT_ICON_COLOR_SETS.length
+  ]!;
 }
 
 export function ProjectFavicon(input: {
@@ -45,8 +49,12 @@ export function ProjectFavicon(input: {
   className?: string;
 }) {
   const label =
-    input.projectName?.trim() || input.cwd.split(/[\\/]/).filter(Boolean).at(-1) || "PR";
-  const colors = input.active ? activeColorSetForProject(label) : INACTIVE_PROJECT_ICON_COLORS;
+    input.projectName?.trim() ||
+    input.cwd.split(/[\\/]/).filter(Boolean).at(-1) ||
+    "PR";
+  const colors = input.active
+    ? activeColorSetForProject(label)
+    : INACTIVE_PROJECT_ICON_COLORS;
 
   const style = {
     "--project-icon-primary": colors.primary,
@@ -57,7 +65,7 @@ export function ProjectFavicon(input: {
   return (
     <span
       aria-hidden="true"
-      className={`inline-flex  shrink-0 items-center justify-center rounded-[4px] bg-[linear-gradient(180deg,var(--project-icon-primary)_0%,var(--project-icon-secondary)_100%)]  leading-none text-[var(--project-icon-text)] tracking-[-0.04em] shadow-[inset_0_1px_rgba(255,255,255,0.10),inset_0_-1px_rgba(0,0,0,0.18)] ${input.className ?? ""}`}
+      className={`inline-flex  shrink-0 items-center justify-center rounded-[4px] bg-[linear-gradient(180deg,var(--project-icon-primary)_0%,var(--project-icon-secondary)_100%)]  leading-none text-[var(--project-icon-text)]  tracking-[-0.04em]  ${input.className ?? ""}`}
       style={style}
     >
       {initialsForProject(label)}

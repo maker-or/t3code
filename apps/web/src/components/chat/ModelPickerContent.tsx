@@ -6,6 +6,7 @@ import {
 import { resolveSelectableModel } from "@t3tools/shared/model";
 import { memo, useMemo, useState, useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { SearchIcon } from "lucide-react";
+import { gsap } from "gsap";
 import { ModelListRow } from "./ModelListRow";
 import { ModelPickerSidebar } from "./ModelPickerSidebar";
 import { isModelPickerNewModel } from "./modelPickerModelHighlights";
@@ -515,6 +516,34 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
     };
   }, [filteredModelKeys]);
 
+  useEffect(() => {
+    const listRegion = listRegionRef.current;
+    if (!listRegion) return;
+
+    const rows = listRegion.querySelectorAll<HTMLDivElement>(
+      "[data-slot] > div, .model-picker-row, [role='option']",
+    );
+
+    if (rows.length === 0) return;
+
+    gsap.fromTo(
+      rows,
+      { opacity: 0, y: 16 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.35,
+        stagger: 0.04,
+        ease: "power3.out",
+        overwrite: "auto",
+      },
+    );
+
+    return () => {
+      gsap.killTweensOf(rows);
+    };
+  }, [filteredModelKeys]);
+
   return (
     <TooltipProvider delay={0}>
       <div
@@ -569,7 +598,7 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
             )}
           >
             {/* Search bar */}
-            <div className="border-b px-3 py-2">
+            <div className="model-picker-search-container border-b px-3 py-2">
               <ComboboxInput
                 ref={searchInputRef}
                 className="[&_input]:font-sans rounded-md"
