@@ -240,7 +240,7 @@ function ChatThreadRouteView() {
   if (!shouldUseDiffSheet) {
     return (
       <div className="flex h-[90dvh] min-h-0 min-w-0 flex-1 gap-2 overflow-hidden bg-[#000000]">
-        <SidebarInset className="h-full min-h-0 overflow-hidden overscroll-y-none rounded-xl bg-background text-foreground">
+        <SidebarInset className="h-full min-h-0 overflow-hidden overscroll-y-none bg-background text-foreground">
           <ChatView
             environmentId={threadRef.environmentId}
             threadId={threadRef.threadId}
@@ -261,7 +261,7 @@ function ChatThreadRouteView() {
 
   return (
     <div className="flex h-[90dvh] min-h-0 min-w-0 flex-1 gap-2 overflow-hidden bg-[#000000]">
-      <SidebarInset className="h-full min-h-0 overflow-hidden overscroll-y-none rounded-xl bg-background text-foreground">
+      <SidebarInset className="h-full min-h-0 overflow-hidden overscroll-y-none bg-background text-foreground">
         <ChatView
           environmentId={threadRef.environmentId}
           threadId={threadRef.threadId}
