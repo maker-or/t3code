@@ -3,9 +3,10 @@ import {
   type ProviderDriverKind,
   type ResolvedKeybindingsConfig,
 } from "@t3tools/contracts";
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState, useRef } from "react";
 import type { VariantProps } from "class-variance-authority";
 import { ChevronDownIcon } from "lucide-react";
+import { gsap } from "gsap";
 import { Button, buttonVariants } from "../ui/button";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
@@ -45,6 +46,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
 }) {
   const [uncontrolledIsMenuOpen, setUncontrolledIsMenuOpen] = useState(false);
   const isMenuOpen = props.open ?? uncontrolledIsMenuOpen;
+  const popupRef = useRef<HTMLDivElement>(null);
 
   // Resolve the active instance entry by exact routing key. The composer
   // resolves fallbacks before rendering this component; if the selected
@@ -84,6 +86,41 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
     return () => {
       setModelPickerOpen(false);
     };
+  }, [isMenuOpen]);
+
+  useEffect(() => {
+    const popup = popupRef.current;
+    if (!popup) return;
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) {
+      if (isMenuOpen) {
+        gsap.set(popup, { opacity: 1, scale: 1, filter: "blur(0px)" });
+      }
+      return;
+    }
+
+    if (isMenuOpen) {
+      gsap.fromTo(
+        popup,
+        { opacity: 0, scale: 0.96, filter: "blur(4px)" },
+        {
+          opacity: 1,
+          scale: 1,
+          filter: "blur(0px)",
+          duration: 0.25,
+          ease: "power3.out",
+        },
+      );
+    } else {
+      gsap.to(popup, {
+        opacity: 0,
+        scale: 0.95,
+        filter: "blur(4px)",
+        duration: 0.15,
+        ease: "power2.in",
+      });
+    }
   }, [isMenuOpen]);
 
   const handleInstanceModelChange = (instanceId: ProviderInstanceId, model: string) => {
@@ -166,6 +203,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
         </span>
       </PopoverTrigger>
       <PopoverPopup
+        ref={popupRef}
         align="start"
         className="border-0 bg-transparent p-0 shadow-none before:hidden [--viewport-inline-padding:0] *:data-[slot=popover-viewport]:p-0"
       >

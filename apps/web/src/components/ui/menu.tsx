@@ -2,6 +2,8 @@
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { ChevronRightIcon } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { gsap } from "gsap";
 import type * as React from "react";
 
 import { cn } from "~/lib/utils";
@@ -36,6 +38,38 @@ function MenuPopup({
   side?: MenuPrimitive.Positioner.Props["side"];
   anchor?: MenuPrimitive.Positioner.Props["anchor"];
 }) {
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const popup = popupRef.current;
+    if (!popup) return;
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) return;
+
+    // Animate in on mount - slide up + fade
+    gsap.fromTo(
+      popup,
+      { opacity: 0, y: -8 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.25,
+        ease: "power3.out",
+      },
+    );
+
+    return () => {
+      // Animate out on unmount
+      gsap.to(popup, {
+        opacity: 0,
+        y: -4,
+        duration: 0.15,
+        ease: "power2.in",
+      });
+    };
+  }, []);
+
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
@@ -55,7 +89,9 @@ function MenuPopup({
           data-slot="menu-popup"
           {...props}
         >
-          <div className="max-h-(--available-height) w-full overflow-y-auto p-1">{children}</div>
+          <div ref={popupRef} className="max-h-(--available-height) w-full overflow-y-auto p-1">
+            {children}
+          </div>
         </MenuPrimitive.Popup>
       </MenuPrimitive.Positioner>
     </MenuPrimitive.Portal>

@@ -5,6 +5,8 @@ import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import { ChevronDownIcon, ChevronsUpDownIcon, ChevronUpIcon } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { gsap } from "gsap";
 import type * as React from "react";
 
 import { cn } from "~/lib/utils";
@@ -125,6 +127,40 @@ function SelectPopup({
   matchTriggerWidth?: boolean;
   anchor?: SelectPrimitive.Positioner.Props["anchor"];
 }) {
+  const popupContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = popupContainerRef.current;
+    if (!container) return;
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) return;
+
+    // Animate in on mount
+    gsap.fromTo(
+      container,
+      { opacity: 0, scale: 0.96, filter: "blur(4px)" },
+      {
+        opacity: 1,
+        scale: 1,
+        filter: "blur(0px)",
+        duration: 0.25,
+        ease: "power3.out",
+      },
+    );
+
+    return () => {
+      // Animate out on unmount
+      gsap.to(container, {
+        opacity: 0,
+        scale: 0.95,
+        filter: "blur(4px)",
+        duration: 0.15,
+        ease: "power2.in",
+      });
+    };
+  }, []);
+
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Positioner
@@ -149,6 +185,7 @@ function SelectPopup({
             <ChevronUpIcon className="relative size-4.5 sm:size-4" />
           </SelectPrimitive.ScrollUpArrow>
           <div
+            ref={popupContainerRef}
             className={cn(
               "relative h-full rounded-lg border bg-popover not-dark:bg-clip-padding shadow-lg/5 before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-lg)-1px)] before:shadow-[0_1px_--theme(--color-black/4%)] dark:before:shadow-[0_-1px_--theme(--color-white/6%)]",
               matchTriggerWidth && "min-w-(--anchor-width)",

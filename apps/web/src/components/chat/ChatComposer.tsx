@@ -1963,7 +1963,7 @@ export const ChatComposer = memo(
           data-chat-composer-footer="true"
           data-chat-composer-footer-compact={isComposerFooterCompact ? "true" : "false"}
           className={cn(
-            "sticky bottom-0 z-20 flex w-full min-w-0 flex-col gap-2 overflow-visible bg-[#191C21] pt-2",
+            "fixed bottom-[calc(5dvh-18px)] left-[calc(var(--sidebar-width)+0.75rem)] z-40 flex h-10 min-w-0 max-w-[calc(100vw-var(--sidebar-width)-8rem)] flex-col items-center justify-center gap-2 overflow-visible",
             isComposerFooterCompact ? "gap-1.5" : "gap-2",
             showMobilePendingAnswerActions && "hidden sm:flex",
           )}
@@ -2186,7 +2186,7 @@ export const ChatComposer = memo(
             ref={composerSurfaceRef}
             data-chat-composer-mobile-collapsed={isComposerCollapsedMobile ? "true" : "false"}
             className={cn(
-              "rounded-full border bg-[#0B0E14] transition-colors duration-200 has-focus-visible:border-ring/45",
+              "rounded-full border bg-[#000000] transition-colors duration-200 has-focus-visible:border-ring/45",
               isDragOverComposer ? "border-primary/70 bg-accent/30" : "border-border",
               environmentUnavailable ? "opacity-75" : null,
               composerProviderState.composerSurfaceClassName,

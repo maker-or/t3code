@@ -54,10 +54,14 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
   }, [navigate]);
 
   return (
-    <SidebarProvider className="h-dvh! min-h-0!" defaultOpen>
+    <SidebarProvider
+      className="h-dvh! min-h-0!"
+      defaultOpen
+      style={{ "--sidebar-width": `${THREAD_SIDEBAR_MIN_WIDTH}px` } as CSSProperties}
+    >
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 bottom-0 h-[10dvh] bg-[#0B0E14]"
+        className="pointer-events-none fixed inset-x-0 bottom-0 h-[10dvh] bg-[#000000]"
       />
       <Sidebar
         side="left"
