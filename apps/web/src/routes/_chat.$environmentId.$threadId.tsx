@@ -117,7 +117,7 @@ const DiffPanelInlineSidebar = (props: {
       defaultOpen={false}
       open={diffOpen}
       onOpenChange={onOpenChange}
-      className="w-auto min-h-0 flex-none bg-transparent"
+      className="h-full w-auto min-h-0 flex-none bg-transparent"
       style={{ "--sidebar-width": DIFF_INLINE_DEFAULT_WIDTH } as React.CSSProperties}
     >
       <Sidebar
@@ -239,8 +239,8 @@ function ChatThreadRouteView() {
 
   if (!shouldUseDiffSheet) {
     return (
-      <>
-        <SidebarInset className="h-svh min-h-0 overflow-hidden overscroll-y-none bg-background text-foreground md:h-dvh">
+      <div className="flex h-[90dvh] min-h-0 min-w-0 flex-1 gap-2 overflow-hidden bg-[#0B0E14]">
+        <SidebarInset className="h-full min-h-0 overflow-hidden overscroll-y-none rounded-xl bg-background text-foreground">
           <ChatView
             environmentId={threadRef.environmentId}
             threadId={threadRef.threadId}
@@ -255,13 +255,13 @@ function ChatThreadRouteView() {
           onOpenDiff={openDiff}
           renderDiffContent={shouldRenderDiffContent}
         />
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      <SidebarInset className="h-svh min-h-0 overflow-hidden overscroll-y-none bg-background text-foreground md:h-dvh">
+    <div className="flex h-[90dvh] min-h-0 min-w-0 flex-1 gap-2 overflow-hidden bg-[#0B0E14]">
+      <SidebarInset className="h-full min-h-0 overflow-hidden overscroll-y-none rounded-xl bg-background text-foreground">
         <ChatView
           environmentId={threadRef.environmentId}
           threadId={threadRef.threadId}
@@ -272,7 +272,7 @@ function ChatThreadRouteView() {
       <RightPanelSheet open={diffOpen} onClose={closeDiff}>
         {shouldRenderDiffContent ? <LazyDiffPanel mode="sheet" /> : null}
       </RightPanelSheet>
-    </>
+    </div>
   );
 }
 

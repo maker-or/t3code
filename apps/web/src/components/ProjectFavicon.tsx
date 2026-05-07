@@ -1,55 +1,66 @@
+import type { CSSProperties } from "react";
 import type { EnvironmentId } from "@t3tools/contracts";
-import { FolderIcon } from "lucide-react";
-import { useState } from "react";
-import { resolveEnvironmentHttpUrl } from "../environments/runtime";
 
-const loadedProjectFaviconSrcs = new Set<string>();
+const ACTIVE_PROJECT_ICON_COLOR_SETS = [
+  { primary: "#506546", secondary: "#132E1E", text: "#6D9C4D" },
+  { primary: "#425860", secondary: "#1C2836", text: "#496F92" },
+  { primary: "#60425F", secondary: "#361C2F", text: "#86468C" },
+  { primary: "#604E42", secondary: "#36291C", text: "#8C6346" },
+  { primary: "#604242", secondary: "#361C1C", text: "#8C4746" },
+  { primary: "#444260", secondary: "#291C36", text: "#5A468C" },
+] as const;
+
+const INACTIVE_PROJECT_ICON_COLORS = {
+  primary: "#6E736B",
+  secondary: "#353937",
+  text: "#878D81",
+} as const;
+
+function initialsForProject(value: string): string {
+  const parts = value
+    .trim()
+    .split(/[\s._/-]+/)
+    .filter(Boolean);
+
+  if (parts.length >= 2) {
+    return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase();
+  }
+
+  return (parts[0] ?? value).slice(0, 2).toUpperCase();
+}
+
+function activeColorSetForProject(value: string): (typeof ACTIVE_PROJECT_ICON_COLOR_SETS)[number] {
+  let hash = 0;
+  for (let index = 0; index < value.length; index++) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return ACTIVE_PROJECT_ICON_COLOR_SETS[hash % ACTIVE_PROJECT_ICON_COLOR_SETS.length]!;
+}
 
 export function ProjectFavicon(input: {
   environmentId: EnvironmentId;
   cwd: string;
+  projectName?: string;
+  active?: boolean;
   className?: string;
 }) {
-  const src = (() => {
-    try {
-      return resolveEnvironmentHttpUrl({
-        environmentId: input.environmentId,
-        pathname: "/api/project-favicon",
-        searchParams: { cwd: input.cwd },
-      });
-    } catch {
-      return null;
-    }
-  })();
-  const [status, setStatus] = useState<"loading" | "loaded" | "error">(() =>
-    src && loadedProjectFaviconSrcs.has(src) ? "loaded" : "loading",
-  );
+  const label =
+    input.projectName?.trim() || input.cwd.split(/[\\/]/).filter(Boolean).at(-1) || "PR";
+  const colors = input.active ? activeColorSetForProject(label) : INACTIVE_PROJECT_ICON_COLORS;
 
-  if (!src) {
-    return (
-      <FolderIcon
-        className={`size-3.5 shrink-0 text-muted-foreground/50 ${input.className ?? ""}`}
-      />
-    );
-  }
+  const style = {
+    "--project-icon-primary": colors.primary,
+    "--project-icon-secondary": colors.secondary,
+    "--project-icon-text": colors.text,
+  } as CSSProperties;
 
   return (
-    <>
-      {status !== "loaded" ? (
-        <FolderIcon
-          className={`size-3.5 shrink-0 text-muted-foreground/50 ${input.className ?? ""}`}
-        />
-      ) : null}
-      <img
-        src={src}
-        alt=""
-        className={`size-3.5 shrink-0 rounded-sm object-contain ${status === "loaded" ? "" : "hidden"} ${input.className ?? ""}`}
-        onLoad={() => {
-          loadedProjectFaviconSrcs.add(src);
-          setStatus("loaded");
-        }}
-        onError={() => setStatus("error")}
-      />
-    </>
+    <span
+      aria-hidden="true"
+      className={`inline-flex  shrink-0 items-center justify-center rounded-[4px] bg-[linear-gradient(180deg,var(--project-icon-primary)_0%,var(--project-icon-secondary)_100%)]  leading-none text-[var(--project-icon-text)] tracking-[-0.04em] shadow-[inset_0_1px_rgba(255,255,255,0.10),inset_0_-1px_rgba(0,0,0,0.18)] ${input.className ?? ""}`}
+      style={style}
+    >
+      {initialsForProject(label)}
+    </span>
   );
 }

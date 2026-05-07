@@ -1,28 +1,38 @@
 import {
   type EnvironmentId,
   type EditorId,
+  type ProjectId,
   type ProjectScript,
   type ResolvedKeybindingsConfig,
   type ThreadId,
 } from "@t3tools/contracts";
-import { scopeThreadRef } from "@t3tools/client-runtime";
-import { memo } from "react";
+import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { memo, useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import GitActionsControl from "../GitActionsControl";
 import { type DraftId } from "~/composerDraftStore";
-import { DiffIcon, TerminalSquareIcon } from "lucide-react";
+import { GearSixIcon, PlusMinusIcon, TerminalIcon } from "@phosphor-icons/react";
 import { Badge } from "../ui/badge";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import ProjectScriptsControl, { type NewProjectScriptInput } from "../ProjectScriptsControl";
-import { Toggle } from "../ui/toggle";
 import { SidebarTrigger } from "../ui/sidebar";
 import { OpenInPicker } from "./OpenInPicker";
 import { usePrimaryEnvironmentId } from "../../environments/primary";
+import { selectSidebarThreadsForProjectRefs, useStore } from "../../store";
+import { buildThreadRouteParams } from "../../threadRoutes";
+import { useNewThreadHandler } from "../../hooks/useHandleNewThread";
+import type { SidebarThreadSummary } from "../../types";
+
+const EMPTY_THREAD_SUMMARIES: readonly SidebarThreadSummary[] = [];
+const DOCK_ICON_BUTTON_CLASS_NAME =
+  "inline-flex size-9 items-center justify-center text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40";
 
 interface ChatHeaderProps {
   activeThreadEnvironmentId: EnvironmentId;
   activeThreadId: ThreadId;
   draftId?: DraftId;
-  activeThreadTitle: string;
+  activeProjectId: ProjectId | undefined;
   activeProjectName: string | undefined;
   isGitRepo: boolean;
   openInCwd: string | null;
@@ -60,7 +70,7 @@ export const ChatHeader = memo(function ChatHeader({
   activeThreadEnvironmentId,
   activeThreadId,
   draftId,
-  activeThreadTitle,
+  activeProjectId,
   activeProjectName,
   isGitRepo,
   openInCwd,
@@ -81,23 +91,83 @@ export const ChatHeader = memo(function ChatHeader({
   onToggleTerminal,
   onToggleDiff,
 }: ChatHeaderProps) {
+  const navigate = useNavigate();
   const primaryEnvironmentId = usePrimaryEnvironmentId();
   const showOpenInPicker = shouldShowOpenInPicker({
     activeProjectName,
     activeThreadEnvironmentId,
     primaryEnvironmentId,
   });
+  const { handleNewThread } = useNewThreadHandler();
+  const activeProjectRef = useMemo(
+    () => (activeProjectId ? scopeProjectRef(activeThreadEnvironmentId, activeProjectId) : null),
+    [activeProjectId, activeThreadEnvironmentId],
+  );
+  const preferredProjectScript = useMemo(() => {
+    if (!activeProjectScripts?.length) {
+      return null;
+    }
+    return (
+      activeProjectScripts.find((script) => script.id === preferredScriptId) ??
+      activeProjectScripts[0] ??
+      null
+    );
+  }, [activeProjectScripts, preferredScriptId]);
+  const projectThreads = useStore(
+    useShallow((store) =>
+      activeProjectRef
+        ? selectSidebarThreadsForProjectRefs(store, [activeProjectRef])
+        : EMPTY_THREAD_SUMMARIES,
+    ),
+  );
 
   return (
     <div className="@container/header-actions flex min-w-0 flex-1 items-center gap-2">
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden sm:gap-3">
         <SidebarTrigger className="size-7 shrink-0 md:hidden" />
-        <h2
-          className="min-w-0 shrink truncate text-sm font-medium text-foreground"
-          title={activeThreadTitle}
-        >
-          {activeThreadTitle}
-        </h2>
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+          {projectThreads.map((thread) => {
+            const selected =
+              thread.environmentId === activeThreadEnvironmentId && thread.id === activeThreadId;
+            return (
+              <Link
+                key={`${thread.environmentId}:${thread.id}`}
+                to="/$environmentId/$threadId"
+                params={buildThreadRouteParams({
+                  environmentId: thread.environmentId,
+                  threadId: thread.id,
+                })}
+                className={`max-w-48 shrink-0 truncate px-2.5 py-1 text-xs transition-colors ${
+                  selected
+                    ? "bg-accent text-foreground"
+                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                }`}
+                title={thread.title}
+              >
+                {thread.title}
+              </Link>
+            );
+          })}
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label="New thread"
+                  className="inline-flex size-7 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  onClick={() => {
+                    if (activeProjectRef) {
+                      void handleNewThread(activeProjectRef);
+                    }
+                  }}
+                />
+              }
+            >
+              +
+            </TooltipTrigger>
+            <TooltipPopup side="bottom">New thread</TooltipPopup>
+          </Tooltip>
+        </div>
         {activeProjectName && (
           <Badge variant="outline" className="min-w-0 shrink overflow-hidden">
             <span className="min-w-0 truncate">{activeProjectName}</span>
@@ -109,7 +179,24 @@ export const ChatHeader = memo(function ChatHeader({
           </Badge>
         )}
       </div>
-      <div className="flex shrink-0 items-center justify-end gap-2 @3xl/header-actions:gap-3">
+      <div className="fixed right-3 bottom-[calc(5dvh-18px)] z-40 flex h-10 shrink-0 items-center justify-end gap-2">
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                aria-label="Settings"
+                className={DOCK_ICON_BUTTON_CLASS_NAME}
+                onClick={() => {
+                  void navigate({ to: "/settings" });
+                }}
+              />
+            }
+          >
+            <GearSixIcon aria-hidden="true" size={22} />
+          </TooltipTrigger>
+          <TooltipPopup side="top">Settings</TooltipPopup>
+        </Tooltip>
         {activeProjectScripts && (
           <ProjectScriptsControl
             scripts={activeProjectScripts}
@@ -119,6 +206,8 @@ export const ChatHeader = memo(function ChatHeader({
             onAddScript={onAddProjectScript}
             onUpdateScript={onUpdateProjectScript}
             onDeleteScript={onDeleteProjectScript}
+            dockIconOnly
+            dockIconButtonClassName={DOCK_ICON_BUTTON_CLASS_NAME}
           />
         )}
         {showOpenInPicker && (
@@ -126,6 +215,8 @@ export const ChatHeader = memo(function ChatHeader({
             keybindings={keybindings}
             availableEditors={availableEditors}
             openInCwd={openInCwd}
+            iconOnly
+            iconButtonClassName={DOCK_ICON_BUTTON_CLASS_NAME}
           />
         )}
         {activeProjectName && (
@@ -133,25 +224,26 @@ export const ChatHeader = memo(function ChatHeader({
             gitCwd={gitCwd}
             activeThreadRef={scopeThreadRef(activeThreadEnvironmentId, activeThreadId)}
             {...(draftId ? { draftId } : {})}
+            dockIconOnly
+            dockIconButtonClassName={DOCK_ICON_BUTTON_CLASS_NAME}
           />
         )}
         <Tooltip>
           <TooltipTrigger
             render={
-              <Toggle
-                className="shrink-0"
-                pressed={terminalOpen}
-                onPressedChange={onToggleTerminal}
+              <button
+                type="button"
+                className={DOCK_ICON_BUTTON_CLASS_NAME}
+                aria-pressed={terminalOpen}
                 aria-label="Toggle terminal drawer"
-                variant="outline"
-                size="xs"
                 disabled={!terminalAvailable}
-              >
-                <TerminalSquareIcon className="size-3" />
-              </Toggle>
+                onClick={onToggleTerminal}
+              />
             }
-          />
-          <TooltipPopup side="bottom">
+          >
+            <TerminalIcon aria-hidden="true" size={22} weight={terminalOpen ? "fill" : "regular"} />
+          </TooltipTrigger>
+          <TooltipPopup side="top">
             {!terminalAvailable
               ? "Terminal is unavailable until this thread has an active project."
               : terminalToggleShortcutLabel
@@ -162,20 +254,19 @@ export const ChatHeader = memo(function ChatHeader({
         <Tooltip>
           <TooltipTrigger
             render={
-              <Toggle
-                className="shrink-0"
-                pressed={diffOpen}
-                onPressedChange={onToggleDiff}
+              <button
+                type="button"
+                className={DOCK_ICON_BUTTON_CLASS_NAME}
+                aria-pressed={diffOpen}
                 aria-label="Toggle diff panel"
-                variant="outline"
-                size="xs"
                 disabled={!isGitRepo && !diffOpen}
-              >
-                <DiffIcon className="size-3" />
-              </Toggle>
+                onClick={onToggleDiff}
+              />
             }
-          />
-          <TooltipPopup side="bottom">
+          >
+            <PlusMinusIcon aria-hidden="true" size={22} weight={diffOpen ? "fill" : "regular"} />
+          </TooltipTrigger>
+          <TooltipPopup side="top">
             {!isGitRepo && !diffOpen
               ? "Diff panel is unavailable because this project is not a git repository."
               : diffToggleShortcutLabel

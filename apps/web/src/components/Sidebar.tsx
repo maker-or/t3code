@@ -2005,7 +2005,13 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
               }`}
             />
           )}
-          <ProjectFavicon environmentId={project.environmentId} cwd={project.cwd} />
+          <ProjectFavicon
+            environmentId={project.environmentId}
+            cwd={project.cwd}
+            projectName={project.displayName}
+            active={activeRouteThreadKey !== null}
+            className="size-8 text-lg"
+          />
           <span className="flex min-w-0 flex-1 items-center gap-2">
             <span className="truncate text-xs font-medium text-foreground/90">
               {project.displayName}
@@ -2713,6 +2719,136 @@ const SidebarProjectsContent = memo(function SidebarProjectsContent(
   );
 });
 
+const CompactSidebarProjectRail = memo(function CompactSidebarProjectRail(props: {
+  sortedProjects: readonly SidebarProjectSnapshot[];
+  threadsByProjectKey: ReadonlyMap<string, SidebarThreadSummary[]>;
+  routeThreadKey: string | null;
+  activeRouteProjectKey: string | null;
+  openAddProject: () => void;
+}) {
+  const { sortedProjects, activeRouteProjectKey, openAddProject } = props;
+  const { handleNewThread } = useNewThreadHandler();
+
+  const createThreadForProjectMember = useCallback(
+    (member: SidebarProjectGroupMember) => {
+      void handleNewThread(scopeProjectRef(member.environmentId, member.id));
+    },
+    [handleNewThread],
+  );
+
+  const handleProjectIconClick = useCallback(
+    (project: SidebarProjectSnapshot, event: React.MouseEvent<HTMLButtonElement>) => {
+      if (project.memberProjects.length === 1) {
+        createThreadForProjectMember(project.memberProjects[0]!);
+        return;
+      }
+
+      void (async () => {
+        const api = readLocalApi();
+        if (!api) {
+          return;
+        }
+        const clicked = await api.contextMenu.show(
+          project.memberProjects.map((member) => ({
+            id: member.physicalProjectKey,
+            label: formatProjectMemberActionLabel(member, project.groupedProjectCount),
+          })),
+          {
+            x: event.clientX,
+            y: event.clientY,
+          },
+        );
+        if (!clicked) {
+          return;
+        }
+        const targetMember = project.memberProjects.find(
+          (member) => member.physicalProjectKey === clicked,
+        );
+        if (!targetMember) {
+          return;
+        }
+        createThreadForProjectMember(targetMember);
+      })();
+    },
+    [createThreadForProjectMember],
+  );
+
+  return (
+    <div className="flex h-full min-h-0 w-16 flex-col items-center bg-[#0B0E14]">
+      <SidebarHeader className="drag-region flex h-[52px] w-full items-center justify-center p-0">
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Link
+                aria-label="Go to threads"
+                className="inline-flex size-9 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent"
+                to="/"
+              >
+                <T3Wordmark />
+              </Link>
+            }
+          />
+          <TooltipPopup side="right">T3 Code</TooltipPopup>
+        </Tooltip>
+      </SidebarHeader>
+      <SidebarContent className="w-full items-center gap-1 overflow-y-auto px-2 py-2">
+        {sortedProjects.map((project) => {
+          const active = project.projectKey === activeRouteProjectKey;
+          return (
+            <Tooltip key={project.projectKey}>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    aria-label={project.displayName}
+                    className={`inline-flex size-10 items-center justify-center rounded-md transition-colors ${
+                      active
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
+                    }`}
+                    onClick={(event) => {
+                      handleProjectIconClick(project, event);
+                    }}
+                  />
+                }
+              >
+                <ProjectFavicon
+                  environmentId={project.environmentId}
+                  cwd={project.cwd}
+                  projectName={project.displayName}
+                  active={active}
+                  className="size-8 text-xl"
+                />
+              </TooltipTrigger>
+              <TooltipPopup side="right">{project.displayName}</TooltipPopup>
+            </Tooltip>
+          );
+        })}
+      </SidebarContent>
+      <SidebarFooter className="w-full items-center p-2">
+        <SidebarProviderUpdatePill />
+        <SidebarUpdatePill />
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                aria-label="Add project"
+                data-testid="sidebar-add-project-trigger"
+                className="inline-flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                onClick={openAddProject}
+              />
+            }
+          >
+            <FolderPlusIcon className="size-4" />
+          </TooltipTrigger>
+          <TooltipPopup side="right">Add project</TooltipPopup>
+        </Tooltip>
+      </SidebarFooter>
+    </div>
+  );
+});
+
 export default function Sidebar() {
   const projects = useStore(useShallow(selectProjectsAcrossEnvironments));
   const sidebarThreads = useStore(useShallow(selectSidebarThreadsAcrossEnvironments));
@@ -2733,11 +2869,22 @@ export default function Sidebar() {
   const { handleNewThread } = useNewThreadHandler();
   const { archiveThread, deleteThread } = useThreadActions();
   const { isMobile, setOpenMobile } = useSidebar();
+  const routeTarget = useParams({
+    strict: false,
+    select: (params) => resolveThreadRouteTarget(params),
+  });
   const routeThreadRef = useParams({
     strict: false,
     select: (params) => resolveThreadRouteRef(params),
   });
   const routeThreadKey = routeThreadRef ? scopedThreadKey(routeThreadRef) : null;
+  const routeDraftThread = useComposerDraftStore(
+    useMemo(
+      () => (state) =>
+        routeTarget?.kind === "draft" ? (state.getDraftSession(routeTarget.draftId) ?? null) : null,
+      [routeTarget],
+    ),
+  );
   const keybindings = useServerKeybindings();
   const openAddProjectCommandPalette = useCommandPaletteStore((store) => store.openAddProject);
   const [expandedThreadListsByProject, setExpandedThreadListsByProject] = useState<
@@ -2821,17 +2968,28 @@ export default function Sidebar() {
   // Resolve the active route's project key to a logical key so it matches the
   // sidebar's grouped project entries.
   const activeRouteProjectKey = useMemo(() => {
-    if (!routeThreadKey) {
+    const activeThread =
+      routeTarget?.kind === "draft"
+        ? routeDraftThread
+        : routeThreadKey
+          ? sidebarThreadByKey.get(routeThreadKey)
+          : null;
+    if (!activeThread) {
       return null;
     }
-    const activeThread = sidebarThreadByKey.get(routeThreadKey);
-    if (!activeThread) return null;
     const physicalKey =
       projectPhysicalKeyByScopedRef.get(
         scopedProjectKey(scopeProjectRef(activeThread.environmentId, activeThread.projectId)),
       ) ?? scopedProjectKey(scopeProjectRef(activeThread.environmentId, activeThread.projectId));
     return physicalToLogicalKey.get(physicalKey) ?? physicalKey;
-  }, [routeThreadKey, sidebarThreadByKey, physicalToLogicalKey, projectPhysicalKeyByScopedRef]);
+  }, [
+    routeDraftThread,
+    routeTarget,
+    routeThreadKey,
+    sidebarThreadByKey,
+    physicalToLogicalKey,
+    projectPhysicalKeyByScopedRef,
+  ]);
 
   // Group threads by logical project key so all threads from grouped projects
   // are displayed together.
@@ -3343,52 +3501,19 @@ export default function Sidebar() {
 
   return (
     <>
-      <SidebarChromeHeader isElectron={isElectron} />
-
       {isOnSettings ? (
-        <SettingsSidebarNav pathname={pathname} />
-      ) : (
         <>
-          <SidebarProjectsContent
-            showArm64IntelBuildWarning={showArm64IntelBuildWarning}
-            arm64IntelBuildWarningDescription={arm64IntelBuildWarningDescription}
-            desktopUpdateButtonAction={desktopUpdateButtonAction}
-            desktopUpdateButtonDisabled={desktopUpdateButtonDisabled}
-            handleDesktopUpdateButtonClick={handleDesktopUpdateButtonClick}
-            projectSortOrder={sidebarProjectSortOrder}
-            threadSortOrder={sidebarThreadSortOrder}
-            projectGroupingMode={sidebarProjectGroupingMode}
-            updateSettings={updateSettings}
-            openAddProject={openAddProjectCommandPalette}
-            isManualProjectSorting={isManualProjectSorting}
-            projectDnDSensors={projectDnDSensors}
-            projectCollisionDetection={projectCollisionDetection}
-            handleProjectDragStart={handleProjectDragStart}
-            handleProjectDragEnd={handleProjectDragEnd}
-            handleProjectDragCancel={handleProjectDragCancel}
-            handleNewThread={handleNewThread}
-            archiveThread={archiveThread}
-            deleteThread={deleteThread}
-            sortedProjects={sortedProjects}
-            expandedThreadListsByProject={expandedThreadListsByProject}
-            activeRouteProjectKey={activeRouteProjectKey}
-            routeThreadKey={routeThreadKey}
-            newThreadShortcutLabel={newThreadShortcutLabel}
-            commandPaletteShortcutLabel={commandPaletteShortcutLabel}
-            threadJumpLabelByKey={visibleThreadJumpLabelByKey}
-            attachThreadListAutoAnimateRef={attachThreadListAutoAnimateRef}
-            expandThreadListForProject={expandThreadListForProject}
-            collapseThreadListForProject={collapseThreadListForProject}
-            dragInProgressRef={dragInProgressRef}
-            suppressProjectClickAfterDragRef={suppressProjectClickAfterDragRef}
-            suppressProjectClickForContextMenuRef={suppressProjectClickForContextMenuRef}
-            attachProjectListAutoAnimateRef={attachProjectListAutoAnimateRef}
-            projectsLength={projects.length}
-          />
-
-          <SidebarSeparator />
-          <SidebarChromeFooter />
+          <SidebarChromeHeader isElectron={isElectron} />
+          <SettingsSidebarNav pathname={pathname} />
         </>
+      ) : (
+        <CompactSidebarProjectRail
+          sortedProjects={sortedProjects}
+          threadsByProjectKey={threadsByProjectKey}
+          routeThreadKey={routeThreadKey}
+          activeRouteProjectKey={activeRouteProjectKey}
+          openAddProject={openAddProjectCommandPalette}
+        />
       )}
     </>
   );

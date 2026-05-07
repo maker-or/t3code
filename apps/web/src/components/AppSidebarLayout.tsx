@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, type CSSProperties, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import ThreadSidebar from "./Sidebar";
@@ -9,7 +9,7 @@ import {
 } from "../shortcutModifierState";
 
 const THREAD_SIDEBAR_WIDTH_STORAGE_KEY = "chat_thread_sidebar_width";
-const THREAD_SIDEBAR_MIN_WIDTH = 13 * 16;
+const THREAD_SIDEBAR_MIN_WIDTH = 4 * 16;
 const THREAD_MAIN_CONTENT_MIN_WIDTH = 40 * 16;
 export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -55,11 +55,21 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider className="h-dvh! min-h-0!" defaultOpen>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-x-0 bottom-0 h-[10dvh] bg-[#0B0E14]"
+      />
       <Sidebar
         side="left"
-        collapsible="offcanvas"
-        className="border-r border-border bg-card text-foreground"
+        collapsible="none"
+        className="h-[90dvh] border-r border-border bg-card text-foreground"
+        style={
+          {
+            "--sidebar-width": `${THREAD_SIDEBAR_MIN_WIDTH}px`,
+          } as CSSProperties
+        }
         resizable={{
+          maxWidth: THREAD_SIDEBAR_MIN_WIDTH,
           minWidth: THREAD_SIDEBAR_MIN_WIDTH,
           shouldAcceptWidth: ({ nextWidth, wrapper }) =>
             wrapper.clientWidth - nextWidth >= THREAD_MAIN_CONTENT_MIN_WIDTH,

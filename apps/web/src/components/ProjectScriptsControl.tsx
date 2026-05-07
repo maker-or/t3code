@@ -94,6 +94,8 @@ interface ProjectScriptsControlProps {
   onAddScript: (input: NewProjectScriptInput) => Promise<void> | void;
   onUpdateScript: (scriptId: string, input: NewProjectScriptInput) => Promise<void> | void;
   onDeleteScript: (scriptId: string) => Promise<void> | void;
+  dockIconOnly?: boolean;
+  dockIconButtonClassName?: string;
 }
 
 export default function ProjectScriptsControl({
@@ -104,6 +106,8 @@ export default function ProjectScriptsControl({
   onAddScript,
   onUpdateScript,
   onDeleteScript,
+  dockIconOnly = false,
+  dockIconButtonClassName,
 }: ProjectScriptsControlProps) {
   const addScriptFormId = React.useId();
   const [editingScriptId, setEditingScriptId] = useState<string | null>(null);
@@ -217,7 +221,63 @@ export default function ProjectScriptsControl({
 
   return (
     <>
-      {primaryScript ? (
+      {dockIconOnly ? (
+        <Menu highlightItemOnHover={false}>
+          <MenuTrigger
+            render={
+              <button
+                type="button"
+                aria-label="Project actions"
+                className={dockIconButtonClassName}
+              />
+            }
+          >
+            <PlayIcon aria-hidden="true" className="size-[22px]" fill="currentColor" />
+          </MenuTrigger>
+          <MenuPopup align="end">
+            {primaryScript ? (
+              <MenuItem
+                className={dropdownItemClassName}
+                onClick={() => onRunScript(primaryScript)}
+              >
+                <ScriptIcon icon={primaryScript.icon} className="size-4" />
+                Run {primaryScript.name}
+              </MenuItem>
+            ) : null}
+            {scripts.length > 1 ? (
+              <>
+                {scripts
+                  .filter((script) => script.id !== primaryScript?.id)
+                  .map((script) => (
+                    <MenuItem
+                      key={script.id}
+                      className={dropdownItemClassName}
+                      onClick={() => onRunScript(script)}
+                    >
+                      <ScriptIcon icon={script.icon} className="size-4" />
+                      <span className="truncate">
+                        {script.runOnWorktreeCreate ? `${script.name} (setup)` : script.name}
+                      </span>
+                    </MenuItem>
+                  ))}
+              </>
+            ) : null}
+            {primaryScript ? (
+              <MenuItem
+                className={dropdownItemClassName}
+                onClick={() => openEditDialog(primaryScript)}
+              >
+                <SettingsIcon className="size-4" />
+                Edit {primaryScript.name}
+              </MenuItem>
+            ) : null}
+            <MenuItem className={dropdownItemClassName} onClick={openAddDialog}>
+              <PlusIcon className="size-4" />
+              Add action
+            </MenuItem>
+          </MenuPopup>
+        </Menu>
+      ) : primaryScript ? (
         <Group aria-label="Project scripts">
           <Button
             size="xs"

@@ -51,6 +51,7 @@ interface BranchToolbarProps {
   onComposerFocusRequest?: () => void;
   availableEnvironments?: readonly EnvironmentOption[];
   onEnvironmentChange?: (environmentId: EnvironmentId) => void;
+  variant?: "default" | "composer";
 }
 
 interface MobileRunContextSelectorProps {
@@ -202,6 +203,7 @@ export const BranchToolbar = memo(function BranchToolbar({
   onComposerFocusRequest,
   availableEnvironments,
   onEnvironmentChange,
+  variant = "default",
 }: BranchToolbarProps) {
   const threadRef = useMemo(
     () => scopeThreadRef(environmentId, threadId),
@@ -239,9 +241,16 @@ export const BranchToolbar = memo(function BranchToolbar({
   const isMobile = useIsMobile();
 
   if (!hasActiveThread || !activeProject) return null;
+  const isComposerVariant = variant === "composer";
 
   return (
-    <div className="mx-auto flex w-full max-w-208 items-center gap-2 px-2.5 pb-3 pt-1 sm:px-3">
+    <div
+      className={
+        isComposerVariant
+          ? "flex min-w-0 shrink-0 items-center gap-1"
+          : "mx-auto flex w-full max-w-208 items-center gap-2 px-2.5 pb-3 pt-1 sm:px-3"
+      }
+    >
       {isMobile ? (
         <MobileRunContextSelector
           envLocked={envLocked}
@@ -277,7 +286,11 @@ export const BranchToolbar = memo(function BranchToolbar({
       )}
 
       <BranchToolbarBranchSelector
-        className="min-w-0 flex-1 justify-end md:ml-auto md:flex-none"
+        className={
+          isComposerVariant
+            ? "min-w-0 max-w-44 flex-none justify-start"
+            : "min-w-0 flex-1 justify-end md:ml-auto md:flex-none"
+        }
         environmentId={environmentId}
         threadId={threadId}
         {...(draftId ? { draftId } : {})}

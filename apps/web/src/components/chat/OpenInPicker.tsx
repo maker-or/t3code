@@ -1,5 +1,6 @@
 import { EditorId, type ResolvedKeybindingsConfig } from "@t3tools/contracts";
 import { memo, useCallback, useEffect, useMemo } from "react";
+import { CaretDownIcon } from "@phosphor-icons/react";
 import { isOpenFavoriteEditorShortcut, shortcutLabelForCommand } from "../../keybindings";
 import { usePreferredEditor } from "../../editorPreferences";
 import { ChevronDownIcon, FolderClosedIcon } from "lucide-react";
@@ -153,10 +154,14 @@ export const OpenInPicker = memo(function OpenInPicker({
   keybindings,
   availableEditors,
   openInCwd,
+  iconOnly = false,
+  iconButtonClassName,
 }: {
   keybindings: ResolvedKeybindingsConfig;
   availableEditors: ReadonlyArray<EditorId>;
   openInCwd: string | null;
+  iconOnly?: boolean;
+  iconButtonClassName?: string;
 }) {
   const [preferredEditor, setPreferredEditor] = usePreferredEditor(availableEditors);
   const options = useMemo(
@@ -195,6 +200,48 @@ export const OpenInPicker = memo(function OpenInPicker({
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [preferredEditor, keybindings, openInCwd]);
+
+  if (iconOnly) {
+    return (
+      <div className="flex items-center">
+        <button
+          type="button"
+          aria-label="Open in editor"
+          className={iconButtonClassName}
+          disabled={!preferredEditor || !openInCwd}
+          onClick={() => openInEditor(preferredEditor)}
+        >
+          {primaryOption?.Icon && <primaryOption.Icon aria-hidden="true" className="size-5" />}
+        </button>
+        <Menu>
+          <MenuTrigger
+            render={
+              <button
+                type="button"
+                aria-label="Choose editor"
+                className="inline-flex size-5 items-center justify-center text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+              />
+            }
+            disabled={!openInCwd}
+          >
+            <CaretDownIcon aria-hidden="true" size={12} />
+          </MenuTrigger>
+          <MenuPopup align="end">
+            {options.length === 0 && <MenuItem disabled>No installed editors found</MenuItem>}
+            {options.map(({ label, Icon, value }) => (
+              <MenuItem key={value} onClick={() => openInEditor(value)}>
+                <Icon aria-hidden="true" className="text-muted-foreground" />
+                {label}
+                {value === preferredEditor && openFavoriteEditorShortcutLabel && (
+                  <MenuShortcut>{openFavoriteEditorShortcutLabel}</MenuShortcut>
+                )}
+              </MenuItem>
+            ))}
+          </MenuPopup>
+        </Menu>
+      </div>
+    );
+  }
 
   return (
     <Group aria-label="Subscription actions">
