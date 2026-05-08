@@ -72,11 +72,7 @@ import { ComposerPendingUserInputPanel } from "./ComposerPendingUserInputPanel";
 import { ComposerPlanFollowUpBanner } from "./ComposerPlanFollowUpBanner";
 import { resolveComposerMenuActiveItemId } from "./composerMenuHighlight";
 import { searchSlashCommandItems } from "./composerSlashCommandSearch";
-import {
-  getComposerProviderState,
-  renderProviderTraitsMenuContent,
-  renderProviderTraitsPicker,
-} from "./composerProviderState";
+import { getComposerProviderState } from "./composerProviderState";
 import { ContextWindowMeter } from "./ContextWindowMeter";
 import { buildExpandedImagePreview, type ExpandedImagePreview } from "./ExpandedImagePreview";
 import { basenameOfPath } from "../../vscode-icons";
@@ -196,6 +192,7 @@ const ComposerFooterModeControls = memo(function ComposerFooterModeControls(prop
     <>
       <Separator orientation="vertical" className="mx-0.5 hidden h-4 sm:block" />
 
+      {/* Build/plan toggle hidden from UI for now.
       {props.showInteractionModeToggle ? (
         <>
           <Button
@@ -218,6 +215,7 @@ const ComposerFooterModeControls = memo(function ComposerFooterModeControls(prop
           <Separator orientation="vertical" className="mx-0.5 hidden h-4 sm:block" />
         </>
       ) : null}
+      */}
 
       <Select
         value={props.runtimeMode}
@@ -493,8 +491,8 @@ export const ChatComposer = memo(
     const {
       composerDraftTarget,
       environmentId,
-      routeKind,
-      routeThreadRef,
+      routeKind: _routeKind,
+      routeThreadRef: _routeThreadRef,
       draftId,
       activeThreadId,
       activeThreadEnvironmentId: _activeThreadEnvironmentId,
@@ -553,7 +551,7 @@ export const ChatComposer = memo(
       handleInteractionModeChange,
       togglePlanSidebar,
       focusComposer,
-      scheduleComposerFocus,
+      scheduleComposerFocus: _scheduleComposerFocus,
       setThreadError,
       onExpandImage,
       footerControls,
@@ -1001,45 +999,6 @@ export const ChatComposer = memo(
         : "No matching command.";
     }, [composerTriggerKind]);
 
-    // ------------------------------------------------------------------
-    // Provider traits UI
-    // ------------------------------------------------------------------
-    const setPromptFromTraits = useCallback(
-      (nextPrompt: string) => {
-        if (nextPrompt === promptRef.current) {
-          scheduleComposerFocus();
-          return;
-        }
-        promptRef.current = nextPrompt;
-        setComposerDraftPrompt(composerDraftTarget, nextPrompt);
-        const nextCursor = collapseExpandedComposerCursor(nextPrompt, nextPrompt.length);
-        setComposerCursor(nextCursor);
-        setComposerTrigger(detectComposerTrigger(nextPrompt, nextPrompt.length));
-        scheduleComposerFocus();
-      },
-      [composerDraftTarget, promptRef, scheduleComposerFocus, setComposerDraftPrompt],
-    );
-
-    const providerTraitsMenuContent = renderProviderTraitsMenuContent({
-      provider: selectedProvider,
-      ...(routeKind === "server" ? { threadRef: routeThreadRef } : {}),
-      ...(routeKind === "draft" && draftId ? { draftId } : {}),
-      model: selectedModel,
-      models: selectedProviderModels,
-      modelOptions: composerModelOptions?.[selectedProvider],
-      prompt,
-      onPromptChange: setPromptFromTraits,
-    });
-    const providerTraitsPicker = renderProviderTraitsPicker({
-      provider: selectedProvider,
-      ...(routeKind === "server" ? { threadRef: routeThreadRef } : {}),
-      ...(routeKind === "draft" && draftId ? { draftId } : {}),
-      model: selectedModel,
-      models: selectedProviderModels,
-      modelOptions: composerModelOptions?.[selectedProvider],
-      prompt,
-      onPromptChange: setPromptFromTraits,
-    });
     const pendingPrimaryAction = useMemo(
       () =>
         activePendingProgress
@@ -1980,6 +1939,7 @@ export const ChatComposer = memo(
               modelOptionsByInstance={modelOptionsByInstance}
               terminalOpen={terminalOpen}
               open={isComposerModelPickerOpen}
+              composerDraftTarget={composerDraftTarget}
               {...(composerProviderState.modelPickerIconClassName
                 ? {
                     activeProviderIconClassName: composerProviderState.modelPickerIconClassName,
@@ -1999,31 +1959,22 @@ export const ChatComposer = memo(
                 planSidebarOpen={planSidebarOpen}
                 runtimeMode={runtimeMode}
                 showInteractionModeToggle={composerProviderControls.showInteractionModeToggle}
-                traitsMenuContent={providerTraitsMenuContent}
                 onToggleInteractionMode={toggleInteractionMode}
                 onTogglePlanSidebar={togglePlanSidebar}
                 onRuntimeModeChange={handleRuntimeModeChange}
               />
             ) : (
-              <>
-                {providerTraitsPicker ? (
-                  <>
-                    <Separator orientation="vertical" className="mx-0.5 hidden h-4 sm:block" />
-                    {providerTraitsPicker}
-                  </>
-                ) : null}
-                <ComposerFooterModeControls
-                  showInteractionModeToggle={composerProviderControls.showInteractionModeToggle}
-                  interactionMode={interactionMode}
-                  runtimeMode={runtimeMode}
-                  showPlanToggle={showPlanSidebarToggle}
-                  planSidebarLabel={planSidebarLabel}
-                  planSidebarOpen={planSidebarOpen}
-                  onToggleInteractionMode={toggleInteractionMode}
-                  onRuntimeModeChange={handleRuntimeModeChange}
-                  onTogglePlanSidebar={togglePlanSidebar}
-                />
-              </>
+              <ComposerFooterModeControls
+                showInteractionModeToggle={composerProviderControls.showInteractionModeToggle}
+                interactionMode={interactionMode}
+                runtimeMode={runtimeMode}
+                showPlanToggle={showPlanSidebarToggle}
+                planSidebarLabel={planSidebarLabel}
+                planSidebarOpen={planSidebarOpen}
+                onToggleInteractionMode={toggleInteractionMode}
+                onRuntimeModeChange={handleRuntimeModeChange}
+                onTogglePlanSidebar={togglePlanSidebar}
+              />
             )}
             {footerControls ? (
               <>

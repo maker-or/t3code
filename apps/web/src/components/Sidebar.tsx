@@ -1,15 +1,14 @@
+import { ArrowUpDownIcon, SquarePenIcon } from "lucide-react";
 import {
   ArchiveIcon,
-  ArrowUpDownIcon,
-  ChevronRightIcon,
+  CaretRightIcon,
   CloudIcon,
-  FolderPlusIcon,
-  SearchIcon,
-  SettingsIcon,
-  SquarePenIcon,
+  FolderSimplePlusIcon,
+  MagnifyingGlassIcon,
+  GearSixIcon,
   TerminalIcon,
-  TriangleAlertIcon,
-} from "lucide-react";
+  WarningIcon,
+} from "@phosphor-icons/react";
 import {
   ChangeRequestStatusIcon,
   prStatusIndicator,
@@ -129,7 +128,7 @@ import {
   MenuTrigger,
 } from "./ui/menu";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "./ui/select";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { Tooltip, TooltipPopup, TooltipTrigger, TooltipProvider } from "./ui/tooltip";
 import {
   SidebarContent,
   SidebarFooter,
@@ -1996,10 +1995,10 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
                   }`}
                 />
               </span>
-              <ChevronRightIcon className="absolute inset-0 m-auto size-3.5 text-muted-foreground/70 opacity-0 transition-opacity duration-150 group-hover/project-header:opacity-100" />
+              <CaretRightIcon className="absolute inset-0 m-auto size-3.5 text-muted-foreground/70 opacity-0 transition-opacity duration-150 group-hover/project-header:opacity-100" />
             </span>
           ) : (
-            <ChevronRightIcon
+            <CaretRightIcon
               className={`-ml-0.5 size-3.5 shrink-0 text-muted-foreground/70 transition-transform duration-150 ${
                 projectExpanded ? "rotate-90" : ""
               }`}
@@ -2429,36 +2428,6 @@ const SidebarChromeHeader = memo(function SidebarChromeHeader({
   );
 });
 
-const SidebarChromeFooter = memo(function SidebarChromeFooter() {
-  const navigate = useNavigate();
-  const { isMobile, setOpenMobile } = useSidebar();
-  const handleSettingsClick = useCallback(() => {
-    if (isMobile) {
-      setOpenMobile(false);
-    }
-    void navigate({ to: "/settings" });
-  }, [isMobile, navigate, setOpenMobile]);
-
-  return (
-    <SidebarFooter className="p-2">
-      <SidebarProviderUpdatePill />
-      <SidebarUpdatePill />
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            size="sm"
-            className="gap-2 px-2 py-1.5 text-muted-foreground/70 hover:bg-transparent hover:text-foreground"
-            onClick={handleSettingsClick}
-          >
-            <SettingsIcon className="icon-hover-scale size-3.5" />
-            <span className="text-xs">Settings</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
-    </SidebarFooter>
-  );
-});
-
 interface SidebarProjectsContentProps {
   showArm64IntelBuildWarning: boolean;
   arm64IntelBuildWarningDescription: string | null;
@@ -2569,7 +2538,7 @@ const SidebarProjectsContent = memo(function SidebarProjectsContent(
                 />
               }
             >
-              <SearchIcon className="size-3.5" />
+              <MagnifyingGlassIcon className="size-3.5" />
               <span className="flex-1 truncate text-left text-xs">Search</span>
               {commandPaletteShortcutLabel ? (
                 <Kbd className="h-4 min-w-0 rounded-sm px-1.5 text-[10px]">
@@ -2583,7 +2552,7 @@ const SidebarProjectsContent = memo(function SidebarProjectsContent(
       {showArm64IntelBuildWarning && arm64IntelBuildWarningDescription ? (
         <SidebarGroup className="px-2 pt-2 pb-0">
           <Alert variant="warning" className="rounded-2xl border-warning/40 bg-warning/8">
-            <TriangleAlertIcon />
+            <WarningIcon />
             <AlertTitle>Intel build on Apple Silicon</AlertTitle>
             <AlertDescription>{arm64IntelBuildWarningDescription}</AlertDescription>
             {desktopUpdateButtonAction !== "none" ? (
@@ -2629,7 +2598,7 @@ const SidebarProjectsContent = memo(function SidebarProjectsContent(
                   />
                 }
               >
-                <FolderPlusIcon className="size-3.5" />
+                <FolderSimplePlusIcon className="size-3.5" />
               </TooltipTrigger>
               <TooltipPopup side="right">Add project</TooltipPopup>
             </Tooltip>
@@ -2728,6 +2697,14 @@ const CompactSidebarProjectRail = memo(function CompactSidebarProjectRail(props:
 }) {
   const { sortedProjects, activeRouteProjectKey, openAddProject } = props;
   const { handleNewThread } = useNewThreadHandler();
+  const navigate = useNavigate();
+  const { isMobile, setOpenMobile } = useSidebar();
+  const handleSettingsClick = useCallback(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+    void navigate({ to: "/settings" });
+  }, [isMobile, navigate, setOpenMobile]);
 
   const createThreadForProjectMember = useCallback(
     (member: SidebarProjectGroupMember) => {
@@ -2774,78 +2751,96 @@ const CompactSidebarProjectRail = memo(function CompactSidebarProjectRail(props:
   );
 
   return (
-    <div className="flex h-full min-h-0 w-16 flex-col items-center bg-[#000000]">
-      <SidebarHeader className="drag-region flex h-[52px] w-full items-center justify-center p-0">
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Link
-                aria-label="Go to threads"
-                className="inline-flex size-9 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent"
-                to="/"
-              >
-                <T3Wordmark />
-              </Link>
-            }
-          />
-          <TooltipPopup side="right">T3 Code</TooltipPopup>
-        </Tooltip>
-      </SidebarHeader>
-      <SidebarContent className="w-full items-center gap-1 overflow-y-auto px-2 py-2">
-        {sortedProjects.map((project) => {
-          const active = project.projectKey === activeRouteProjectKey;
-          return (
-            <Tooltip key={project.projectKey}>
-              <TooltipTrigger
-                render={
-                  <button
-                    type="button"
-                    aria-label={project.displayName}
-                    className={`inline-flex size-10 items-center justify-center rounded-md transition-colors ${
-                      active
-                        ? "text-foreground"
-                        : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
-                    }`}
-                    onClick={(event) => {
-                      handleProjectIconClick(project, event);
-                    }}
+    <TooltipProvider delay={100}>
+      <div className="flex h-full min-h-0 w-16 flex-col items-center bg-[#000000]">
+        <SidebarHeader className="drag-region flex h-[52px] w-full items-center justify-center p-0">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Link
+                  aria-label="Go to threads"
+                  className="inline-flex size-9 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent"
+                  to="/"
+                >
+                  <T3Wordmark />
+                </Link>
+              }
+            />
+            <TooltipPopup side="right">T3 Code</TooltipPopup>
+          </Tooltip>
+        </SidebarHeader>
+        <SidebarContent className="w-full items-center gap-1 overflow-y-auto px-2 py-2">
+          {sortedProjects.map((project) => {
+            const active = project.projectKey === activeRouteProjectKey;
+            return (
+              <Tooltip key={project.projectKey}>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      aria-label={project.displayName}
+                      className={`inline-flex size-10 items-center justify-center rounded-md transition-colors ${
+                        active
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
+                      }`}
+                      onClick={(event) => {
+                        handleProjectIconClick(project, event);
+                      }}
+                    />
+                  }
+                >
+                  <ProjectFavicon
+                    environmentId={project.environmentId}
+                    cwd={project.cwd}
+                    projectName={project.displayName}
+                    active={active}
+                    className="size-8 text-xl"
                   />
-                }
-              >
-                <ProjectFavicon
-                  environmentId={project.environmentId}
-                  cwd={project.cwd}
-                  projectName={project.displayName}
-                  active={active}
-                  className="size-8 text-xl"
+                </TooltipTrigger>
+                <TooltipPopup side="right">{project.displayName}</TooltipPopup>
+              </Tooltip>
+            );
+          })}
+        </SidebarContent>
+        <SidebarFooter className="w-full items-center p-2">
+          <SidebarProviderUpdatePill />
+          <SidebarUpdatePill />
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label="Add project"
+                  data-testid="sidebar-add-project-trigger"
+                  className="inline-flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  onClick={openAddProject}
                 />
-              </TooltipTrigger>
-              <TooltipPopup side="right">{project.displayName}</TooltipPopup>
-            </Tooltip>
-          );
-        })}
-      </SidebarContent>
-      <SidebarFooter className="w-full items-center p-2">
-        <SidebarProviderUpdatePill />
-        <SidebarUpdatePill />
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <button
-                type="button"
-                aria-label="Add project"
-                data-testid="sidebar-add-project-trigger"
-                className="inline-flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                onClick={openAddProject}
-              />
-            }
-          >
-            <FolderPlusIcon className="size-4" />
-          </TooltipTrigger>
-          <TooltipPopup side="right">Add project</TooltipPopup>
-        </Tooltip>
-      </SidebarFooter>
-    </div>
+              }
+            >
+              <FolderSimplePlusIcon className="size-5" />
+            </TooltipTrigger>
+            <TooltipPopup side="right">Add project</TooltipPopup>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label="Settings"
+                  data-testid="sidebar-settings-trigger"
+                  className="inline-flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  onClick={handleSettingsClick}
+                />
+              }
+            >
+              <GearSixIcon className="size-5" />
+            </TooltipTrigger>
+            <TooltipPopup side="right">Settings</TooltipPopup>
+          </Tooltip>
+        </SidebarFooter>
+      </div>
+    </TooltipProvider>
   );
 });
 

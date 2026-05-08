@@ -5,11 +5,13 @@ import {
   use,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
+import { gsap } from "gsap";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import { deriveTimelineEntries } from "../../session-logic";
 import { type TurnDiffSummary } from "../../types";
@@ -18,6 +20,7 @@ import ChatMarkdown from "../ChatMarkdown";
 import {
   BotIcon,
   CheckIcon,
+  ChevronDownIcon,
   CircleAlertIcon,
   EyeIcon,
   GlobeIcon,
@@ -86,6 +89,9 @@ interface TimelineRowActivityState {
   isWorking: boolean;
   isRevertingCheckpoint: boolean;
   completionSummary: string | null;
+  /** When true, newly mounted rows play a soft-blur-in enter animation.
+   *  False during the initial render batch so historical rows don't animate. */
+  allowRowEnterAnimation: boolean;
 }
 
 const TimelineRowCtx = createContext<TimelineRowSharedState>(null!);
@@ -150,6 +156,13 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   onIsAtEndChange,
   composer,
 }: MessagesTimelineProps) {
+  // Suppress row enter animations for the initial render batch.
+  // Historical rows that exist on page open should appear instantly.
+  const [allowRowEnterAnimation, setAllowRowEnterAnimation] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setAllowRowEnterAnimation(true), 600);
+    return () => clearTimeout(timer);
+  }, []);
   const rawRows = useMemo(
     () =>
       deriveMessagesTimelineRows({
@@ -227,8 +240,16 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       isWorking,
       isRevertingCheckpoint,
       completionSummary,
+      allowRowEnterAnimation,
     }),
-    [activeTurnInProgress, activeTurnId, completionSummary, isRevertingCheckpoint, isWorking],
+    [
+      activeTurnInProgress,
+      activeTurnId,
+      completionSummary,
+      isRevertingCheckpoint,
+      isWorking,
+      allowRowEnterAnimation,
+    ],
   );
 
   // Stable renderItem — no closure deps. Row components read shared state
@@ -298,9 +319,54 @@ type TimelineMessage = Extract<TimelineEntry, { kind: "message" }>["message"];
 type TimelineWorkEntry = Extract<MessagesTimelineRow, { kind: "work" }>["groupedEntries"][number];
 type TimelineRow = MessagesTimelineRow;
 
+/** Whether this row kind should receive a soft-blur-in enter animation. */
+function shouldAnimateRowEnter(row: TimelineRow): boolean {
+  if (row.kind === "work") return true;
+  if (row.kind === "working") return true;
+  if (row.kind === "proposed-plan") return true;
+  if (row.kind === "message" && row.message.role === "assistant") return true;
+  return false;
+}
+
 const TimelineRowContent = memo(function TimelineRowContent({ row }: { row: TimelineRow }) {
+  const activity = use(TimelineRowActivityCtx);
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  // Soft-blur-in enter animation for rows that appear during streaming.
+  // Skipped for historical rows (allowRowEnterAnimation is false during
+  // the initial render batch) and for user messages (they're the user's
+  // own input — animating them feels wrong).
+  useLayoutEffect(() => {
+    const el = rowRef.current;
+    if (!el || !activity.allowRowEnterAnimation || !shouldAnimateRowEnter(row)) {
+      return;
+    }
+
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return;
+    }
+
+    gsap.fromTo(
+      el,
+      { opacity: 0, y: 10, filter: "blur(6px)" },
+      {
+        opacity: 1,
+        y: 0,
+        filter: "blur(0px)",
+        duration: 0.5,
+        ease: "expo.out",
+        overwrite: true,
+      },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only
+  }, []);
+
   return (
     <div
+      ref={rowRef}
       className={cn(
         "pb-4",
         row.kind === "message" && row.message.role === "assistant" ? "group/assistant" : null,
@@ -544,24 +610,56 @@ const WorkGroupSection = memo(function WorkGroupSection({
 }) {
   const { workspaceRoot } = use(TimelineRowCtx);
   const [isExpanded, setIsExpanded] = useState(false);
+  const onlyToolEntries = groupedEntries.every((entry) => entry.tone === "tool");
+  const isCollapsibleToolGroup = onlyToolEntries && groupedEntries.length > 1;
   const hasOverflow = groupedEntries.length > MAX_VISIBLE_WORK_LOG_ENTRIES;
-  const visibleEntries =
-    hasOverflow && !isExpanded
+  const visibleEntries = isCollapsibleToolGroup
+    ? isExpanded
+      ? groupedEntries
+      : []
+    : hasOverflow && !isExpanded
       ? groupedEntries.slice(-MAX_VISIBLE_WORK_LOG_ENTRIES)
       : groupedEntries;
   const hiddenCount = groupedEntries.length - visibleEntries.length;
-  const onlyToolEntries = groupedEntries.every((entry) => entry.tone === "tool");
-  const showHeader = hasOverflow || !onlyToolEntries;
-  const groupLabel = onlyToolEntries ? "Tool calls" : "Work log";
+  const showHeader = isCollapsibleToolGroup || hasOverflow || !onlyToolEntries;
+  const groupLabel = onlyToolEntries ? toolGroupLabel(groupedEntries) : "Work log";
+  const containerClassName = onlyToolEntries
+    ? "px-1 py-0.5"
+    : "rounded-xl border border-border/45 bg-card/25 px-2 py-1.5";
 
   return (
-    <div className="rounded-xl border border-border/45 bg-card/25 px-2 py-1.5">
+    <div className={containerClassName}>
       {showHeader && (
-        <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5">
-          <p className="text-[9px] uppercase tracking-[0.16em] text-muted-foreground/55">
-            {groupLabel} ({groupedEntries.length})
-          </p>
-          {hasOverflow && (
+        <div
+          className={cn(
+            "flex items-center justify-between gap-2 px-0.5",
+            visibleEntries.length > 0 ? "mb-2" : "",
+          )}
+        >
+          {onlyToolEntries ? (
+            <button
+              type="button"
+              className="flex min-w-0 items-center gap-2 truncate text-[15px] leading-5 font-medium text-foreground/72 transition-colors duration-150 hover:text-foreground/85"
+              aria-expanded={isExpanded}
+              onClick={() => setIsExpanded((value) => !value)}
+            >
+              <>
+                <span className="shrink-0">Exploring</span>
+                <span className="truncate text-muted-foreground/70">{groupLabel}</span>
+                <ChevronDownIcon
+                  className={cn(
+                    "size-3 shrink-0 text-muted-foreground/45 transition-transform duration-150",
+                    isExpanded ? "rotate-180" : "",
+                  )}
+                />
+              </>
+            </button>
+          ) : (
+            <p className="flex min-w-0 items-center gap-2 truncate text-[9px] uppercase tracking-[0.16em] text-muted-foreground/55">
+              {`${groupLabel} (${groupedEntries.length})`}
+            </p>
+          )}
+          {hasOverflow && !onlyToolEntries && (
             <button
               type="button"
               className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground/55 transition-colors duration-150 hover:text-foreground/75"
@@ -572,12 +670,13 @@ const WorkGroupSection = memo(function WorkGroupSection({
           )}
         </div>
       )}
-      <div className="space-y-0.5">
+      <div className={onlyToolEntries ? "space-y-2" : "space-y-0.5"}>
         {visibleEntries.map((workEntry) => (
           <SimpleWorkEntryRow
             key={`work-row:${workEntry.id}`}
             workEntry={workEntry}
             workspaceRoot={workspaceRoot}
+            inlineToolStyle={onlyToolEntries}
           />
         ))}
       </div>
@@ -919,6 +1018,22 @@ function workEntryIcon(workEntry: TimelineWorkEntry): LucideIcon {
   return workToneIcon(workEntry.tone).icon;
 }
 
+function toolGroupLabel(entries: ReadonlyArray<TimelineWorkEntry>): string {
+  const readCount = entries.filter((entry) => entry.requestKind === "file-read").length;
+  if (readCount > 0) {
+    return `${readCount} read`;
+  }
+
+  const commandCount = entries.filter(
+    (entry) => entry.requestKind === "command" || entry.itemType === "command_execution",
+  ).length;
+  if (commandCount > 0) {
+    return `${commandCount} command${commandCount === 1 ? "" : "s"}`;
+  }
+
+  return `${entries.length} tool${entries.length === 1 ? "" : "s"}`;
+}
+
 function capitalizePhrase(value: string): string {
   const trimmed = value.trim();
   if (trimmed.length === 0) {
@@ -934,14 +1049,33 @@ function toolWorkEntryHeading(workEntry: TimelineWorkEntry): string {
   return capitalizePhrase(normalizeCompactToolLabel(workEntry.toolTitle));
 }
 
+function inlineToolEntryHeading(workEntry: TimelineWorkEntry): string {
+  if (workEntry.requestKind === "command" || workEntry.itemType === "command_execution") {
+    return "Ran";
+  }
+  if (workEntry.requestKind === "file-read") {
+    return "Read";
+  }
+  if (workEntry.requestKind === "file-change" || workEntry.itemType === "file_change") {
+    return "Edited";
+  }
+  if (workEntry.tone === "thinking") {
+    return "Thinking";
+  }
+  return toolWorkEntryHeading(workEntry);
+}
+
 const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
   workEntry: TimelineWorkEntry;
   workspaceRoot: string | undefined;
+  inlineToolStyle?: boolean;
 }) {
-  const { workEntry, workspaceRoot } = props;
+  const { workEntry, workspaceRoot, inlineToolStyle = false } = props;
   const iconConfig = workToneIcon(workEntry.tone);
   const EntryIcon = workEntryIcon(workEntry);
-  const heading = toolWorkEntryHeading(workEntry);
+  const heading = inlineToolStyle
+    ? inlineToolEntryHeading(workEntry)
+    : toolWorkEntryHeading(workEntry);
   const rawPreview = workEntryPreview(workEntry, workspaceRoot);
   const preview =
     rawPreview &&
@@ -950,30 +1084,54 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
       ? null
       : rawPreview;
   const rawCommand = workEntryRawCommand(workEntry);
-  const displayText = preview ? `${heading} - ${preview}` : heading;
+  const separator = inlineToolStyle ? " " : " - ";
+  const displayText = preview ? `${heading}${separator}${preview}` : heading;
   const hasChangedFiles = (workEntry.changedFiles?.length ?? 0) > 0;
   const previewIsChangedFiles = hasChangedFiles && !workEntry.command && !workEntry.detail;
+  const isRunning = workEntry.status === "running";
+  const inlineMutedTextClassName = inlineToolStyle
+    ? isRunning
+      ? "text-muted-foreground/72"
+      : "text-muted-foreground/48"
+    : workToneClass(workEntry.tone);
+  const textClassName = cn(
+    inlineToolStyle
+      ? "text-[15px] leading-6"
+      : rawCommand
+        ? "text-xs leading-5"
+        : "text-[11px] leading-5",
+    inlineMutedTextClassName,
+    preview ? "text-muted-foreground/70" : "",
+    inlineToolStyle && isRunning ? "tool-call-shimmer" : "",
+  );
 
   return (
-    <div className="rounded-lg px-1 py-1">
-      <div className="flex items-center gap-2 transition-[opacity,translate] duration-200">
+    <div className={cn(inlineToolStyle ? "px-0 py-0" : "rounded-lg px-1 py-1")}>
+      <div
+        className={cn(
+          "flex items-center gap-2 transition-[opacity,translate] duration-200",
+          inlineToolStyle ? "min-h-6" : "",
+        )}
+      >
         <span
-          className={cn("flex size-5 shrink-0 items-center justify-center", iconConfig.className)}
+          className={cn(
+            "flex shrink-0 items-center justify-center",
+            inlineToolStyle ? "size-6 text-muted-foreground/42" : "size-5",
+            inlineToolStyle ? "" : iconConfig.className,
+          )}
         >
-          <EntryIcon className="size-3" />
+          <EntryIcon className={inlineToolStyle ? "size-4" : "size-3"} />
         </span>
         <div className="min-w-0 flex-1 overflow-hidden">
           {rawCommand ? (
             <div className="max-w-full">
-              <p
-                className={cn(
-                  "truncate text-xs leading-5",
-                  workToneClass(workEntry.tone),
-                  preview ? "text-muted-foreground/70" : "",
-                )}
-                title={displayText}
-              >
-                <span className={cn("text-foreground/80", workToneClass(workEntry.tone))}>
+              <p className={cn("truncate", textClassName)} title={displayText}>
+                <span
+                  className={cn(
+                    inlineToolStyle ? "font-medium" : "text-foreground/80",
+                    inlineMutedTextClassName,
+                  )}
+                >
                   {heading}
                 </span>
                 {preview && (
@@ -982,9 +1140,9 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
                       closeDelay={0}
                       delay={75}
                       render={
-                        <span className="max-w-full cursor-default text-muted-foreground/55 transition-colors hover:text-muted-foreground/75 focus-visible:text-muted-foreground/75">
-                          {" "}
-                          - {preview}
+                        <span className="max-w-full cursor-default text-muted-foreground/48 transition-colors hover:text-muted-foreground/68 focus-visible:text-muted-foreground/68">
+                          {separator}
+                          {preview}
                         </span>
                       }
                     />
@@ -1008,17 +1166,21 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
                 title={displayText}
                 aria-label={displayText}
               >
-                <p
-                  className={cn(
-                    "truncate text-[11px] leading-5",
-                    workToneClass(workEntry.tone),
-                    preview ? "text-muted-foreground/70" : "",
-                  )}
-                >
-                  <span className={cn("text-foreground/80", workToneClass(workEntry.tone))}>
+                <p className={cn("truncate", textClassName)}>
+                  <span
+                    className={cn(
+                      inlineToolStyle ? "font-medium" : "text-foreground/80",
+                      inlineMutedTextClassName,
+                    )}
+                  >
                     {heading}
                   </span>
-                  {preview && <span className="text-muted-foreground/55"> - {preview}</span>}
+                  {preview && (
+                    <span className="text-muted-foreground/48">
+                      {separator}
+                      {preview}
+                    </span>
+                  )}
                 </p>
               </TooltipTrigger>
               <TooltipPopup className="max-w-[min(720px,calc(100vw-2rem))]">
@@ -1031,7 +1193,7 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
         </div>
       </div>
       {hasChangedFiles && !previewIsChangedFiles && (
-        <div className="mt-1 flex flex-wrap gap-1 pl-6">
+        <div className={cn("mt-1 flex flex-wrap gap-1", inlineToolStyle ? "pl-8" : "pl-6")}>
           {workEntry.changedFiles?.slice(0, 4).map((filePath) => {
             const displayPath = formatWorkspaceRelativePath(filePath, workspaceRoot);
             return (

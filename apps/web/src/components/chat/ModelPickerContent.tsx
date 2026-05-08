@@ -2,10 +2,17 @@ import {
   type ProviderInstanceId,
   type ProviderDriverKind,
   type ResolvedKeybindingsConfig,
+  type ScopedThreadRef,
+  type ProviderOptionDescriptor,
 } from "@t3tools/contracts";
-import { resolveSelectableModel } from "@t3tools/shared/model";
+import {
+  resolveSelectableModel,
+  getProviderOptionDescriptors,
+  buildProviderOptionSelectionsFromDescriptors,
+  getProviderOptionCurrentValue,
+} from "@t3tools/shared/model";
 import { memo, useMemo, useState, useCallback, useEffect, useLayoutEffect, useRef } from "react";
-import { SearchIcon } from "lucide-react";
+import { SearchIcon, ChevronLeftIcon, CheckIcon } from "lucide-react";
 import { gsap } from "gsap";
 import { ModelListRow } from "./ModelListRow";
 import { ModelPickerSidebar } from "./ModelPickerSidebar";
@@ -24,6 +31,15 @@ import { cn } from "~/lib/utils";
 import { TooltipProvider } from "../ui/tooltip";
 import type { ProviderInstanceEntry } from "../../providerInstances";
 import { providerModelKey, sortProviderModelItems } from "../../modelOrdering";
+import { shouldRenderTraitsControls } from "./TraitsPicker";
+import { getProviderModelCapabilities } from "../../providerModels";
+import {
+  useComposerDraftStore,
+  useComposerThreadDraft,
+  type DraftId,
+} from "../../composerDraftStore";
+import { Switch } from "../ui/switch";
+import { Button } from "../ui/button";
 
 type ModelPickerItem = {
   slug: string;
@@ -51,6 +67,26 @@ function splitInstanceModelKey(key: string): { instanceId: ProviderInstanceId; s
     instanceId: key.slice(0, colonIndex) as ProviderInstanceId,
     slug: key.slice(colonIndex + 1),
   };
+}
+
+function replaceDescriptorCurrentValue(
+  descriptors: ReadonlyArray<ProviderOptionDescriptor>,
+  descriptorId: string,
+  currentValue: string | boolean | undefined,
+): ReadonlyArray<ProviderOptionDescriptor> {
+  return descriptors.map((descriptor) =>
+    descriptor.id !== descriptorId
+      ? descriptor
+      : descriptor.type === "boolean"
+        ? {
+            ...descriptor,
+            ...(typeof currentValue === "boolean" ? { currentValue } : {}),
+          }
+        : {
+            ...descriptor,
+            ...(typeof currentValue === "string" ? { currentValue } : {}),
+          },
+  );
 }
 
 export const ModelPickerContent = memo(function ModelPickerContent(props: {
@@ -81,6 +117,7 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
    */
   modelOptionsByInstance: ReadonlyMap<ProviderInstanceId, ReadonlyArray<ModelEsque>>;
   terminalOpen: boolean;
+  composerDraftTarget?: ScopedThreadRef | DraftId | undefined;
   onRequestClose?: () => void;
   onInstanceModelChange: (instanceId: ProviderInstanceId, model: string) => void;
 }) {
@@ -157,6 +194,97 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
     () => new Map(instanceEntries.map((entry) => [entry.instanceId, entry])),
     [instanceEntries],
   );
+
+  const [selectedModelForThinking, setSelectedModelForThinking] = useState<{
+    instanceId: ProviderInstanceId;
+    slug: string;
+  } | null>(null);
+
+  const dummyTarget = useMemo(() => "dummy-target" as DraftId, []);
+  const composerDraft = useComposerThreadDraft(props.composerDraftTarget ?? dummyTarget);
+  const setProviderModelOptions = useComposerDraftStore((store) => store.setProviderModelOptions);
+
+  const thinkingModelEntry = useMemo(() => {
+    if (!selectedModelForThinking) return null;
+    return entryByInstanceId.get(selectedModelForThinking.instanceId) ?? null;
+  }, [selectedModelForThinking, entryByInstanceId]);
+
+  const currentModelOptions = useMemo(() => {
+    if (!selectedModelForThinking || !props.composerDraftTarget) return null;
+    return (
+      composerDraft?.modelSelectionByProvider[selectedModelForThinking.instanceId]?.options ?? null
+    );
+  }, [selectedModelForThinking, props.composerDraftTarget, composerDraft]);
+
+  const caps = useMemo(() => {
+    if (!selectedModelForThinking || !thinkingModelEntry) return null;
+    return getProviderModelCapabilities(
+      thinkingModelEntry.models,
+      selectedModelForThinking.slug,
+      thinkingModelEntry.driverKind,
+    );
+  }, [selectedModelForThinking, thinkingModelEntry]);
+
+  const descriptors = useMemo(() => {
+    if (!selectedModelForThinking || !caps) return [];
+    return getProviderOptionDescriptors({
+      caps,
+      selections: currentModelOptions,
+    });
+  }, [selectedModelForThinking, caps, currentModelOptions]);
+
+  const updateModelOptions = useCallback(
+    (nextOptions: ReadonlyArray<any> | undefined) => {
+      if (props.composerDraftTarget && selectedModelForThinking && thinkingModelEntry) {
+        setProviderModelOptions(
+          props.composerDraftTarget,
+          thinkingModelEntry.driverKind,
+          nextOptions,
+          {
+            model: selectedModelForThinking.slug,
+            persistSticky: true,
+          },
+        );
+      }
+    },
+    [
+      props.composerDraftTarget,
+      selectedModelForThinking,
+      thinkingModelEntry,
+      setProviderModelOptions,
+    ],
+  );
+  const thinkingPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = thinkingPanelRef.current;
+    if (!el) return;
+
+    if (selectedModelForThinking) {
+      gsap.fromTo(
+        el,
+        { x: "100%", opacity: 0 },
+        {
+          x: "0%",
+          opacity: 1,
+          duration: 0.3,
+          ease: "power3.out",
+          pointerEvents: "auto",
+          overwrite: "auto",
+        },
+      );
+    } else {
+      gsap.to(el, {
+        x: "100%",
+        opacity: 0,
+        duration: 0.25,
+        ease: "power2.in",
+        pointerEvents: "none",
+        overwrite: "auto",
+      });
+    }
+  }, [selectedModelForThinking]);
+
   const matchesLockedProvider = useCallback(
     (entry: Pick<ProviderInstanceEntry, "driverKind" | "continuationGroupKey">): boolean => {
       if (props.lockedProvider === null) return true;
@@ -211,6 +339,17 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
     }
     return out;
   }, [modelOptionsByInstance, entryByInstanceId, readyInstanceSet]);
+
+  const selectedModelItem = useMemo(() => {
+    if (!selectedModelForThinking) return null;
+    return flatModels.find(
+      (m) =>
+        m.instanceId === selectedModelForThinking.instanceId &&
+        m.slug === selectedModelForThinking.slug,
+    );
+  }, [selectedModelForThinking, flatModels]);
+
+  const selectedModelName = selectedModelItem?.name ?? selectedModelForThinking?.slug ?? "";
 
   const isLocked = props.lockedProvider !== null;
   const isSearching = searchQuery.trim().length > 0;
@@ -344,10 +483,24 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
       // normalization rules, so pass the driver kind here.
       const resolvedModel = resolveSelectableModel(entry.driverKind, modelSlug, options);
       if (resolvedModel) {
-        onInstanceModelChange(instanceId, resolvedModel);
+        const supportsTraits =
+          props.composerDraftTarget &&
+          shouldRenderTraitsControls({
+            provider: entry.driverKind,
+            models: entry.models,
+            model: resolvedModel,
+            prompt: "",
+            modelOptions: null,
+          });
+
+        if (supportsTraits) {
+          setSelectedModelForThinking({ instanceId, slug: resolvedModel });
+        } else {
+          onInstanceModelChange(instanceId, resolvedModel);
+        }
       }
     },
-    [entryByInstanceId, modelOptionsByInstance, onInstanceModelChange],
+    [entryByInstanceId, modelOptionsByInstance, onInstanceModelChange, props.composerDraftTarget],
   );
 
   const toggleFavorite = useCallback(
@@ -672,6 +825,133 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
             </ComboboxEmpty>
           </div>
         </Combobox>
+
+        {/* Thinking overlay panel */}
+        <div
+          ref={thinkingPanelRef}
+          className="absolute inset-0 z-50 flex flex-col bg-popover translate-x-full opacity-0 pointer-events-none"
+        >
+          {selectedModelForThinking && (
+            <div className="flex flex-col h-full w-full bg-popover text-popover-foreground">
+              {/* Header */}
+              <div className="flex items-center gap-2 border-b px-4 py-3 bg-muted/20">
+                <button
+                  onClick={() => setSelectedModelForThinking(null)}
+                  className="p-1 -ml-1 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  aria-label="Back to models list"
+                >
+                  <ChevronLeftIcon className="size-4" />
+                </button>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-semibold text-sm truncate">{selectedModelName}</span>
+                  <span className="text-xs text-muted-foreground truncate">
+                    Choose reasoning level
+                  </span>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+                {descriptors.map((descriptor) => {
+                  if (descriptor.type === "select") {
+                    return (
+                      <div key={descriptor.id} className="space-y-1.5">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {descriptor.label}
+                        </span>
+                        <div className="grid grid-cols-1 gap-1">
+                          {descriptor.options.map((option) => {
+                            const isSelected =
+                              getProviderOptionCurrentValue(descriptor) === option.id;
+                            return (
+                              <button
+                                key={option.id}
+                                onClick={() => {
+                                  const nextDescriptors = replaceDescriptorCurrentValue(
+                                    descriptors,
+                                    descriptor.id,
+                                    option.id,
+                                  );
+                                  const nextOptions =
+                                    buildProviderOptionSelectionsFromDescriptors(nextDescriptors);
+                                  updateModelOptions(nextOptions);
+                                  onInstanceModelChange(
+                                    selectedModelForThinking.instanceId,
+                                    selectedModelForThinking.slug,
+                                  );
+                                }}
+                                className={cn(
+                                  "flex items-center justify-between px-3 py-2.5 rounded-lg border text-left text-sm font-medium transition-all duration-200",
+                                  isSelected
+                                    ? "bg-primary/10 border-primary text-primary shadow-sm"
+                                    : "bg-transparent border-border/60 hover:bg-muted hover:border-border text-foreground/80 hover:text-foreground",
+                                )}
+                              >
+                                <span>{option.label}</span>
+                                <div className="flex items-center gap-1.5">
+                                  {option.isDefault && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase font-semibold tracking-wider">
+                                      Default
+                                    </span>
+                                  )}
+                                  {isSelected && (
+                                    <CheckIcon className="size-4 text-primary shrink-0" />
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  } else if (descriptor.type === "boolean") {
+                    const isChecked = descriptor.currentValue === true;
+                    return (
+                      <div
+                        key={descriptor.id}
+                        className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-transparent"
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">{descriptor.label}</span>
+                        </div>
+                        <Switch
+                          checked={isChecked}
+                          onCheckedChange={(checked) => {
+                            const nextDescriptors = replaceDescriptorCurrentValue(
+                              descriptors,
+                              descriptor.id,
+                              checked,
+                            );
+                            const nextOptions =
+                              buildProviderOptionSelectionsFromDescriptors(nextDescriptors);
+                            updateModelOptions(nextOptions);
+                          }}
+                        />
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+
+              {/* Footer */}
+              <div className="border-t p-3 bg-muted/10 flex items-center justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    onInstanceModelChange(
+                      selectedModelForThinking.instanceId,
+                      selectedModelForThinking.slug,
+                    );
+                  }}
+                >
+                  Confirm
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </TooltipProvider>
   );

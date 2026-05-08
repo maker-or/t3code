@@ -83,6 +83,37 @@
   animation-duration: 0s !important;
 }
 
+.tool-call-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--muted-foreground) 62%, transparent) 0%,
+    color-mix(in oklab, var(--muted-foreground) 62%, transparent) 34%,
+    color-mix(in oklab, var(--muted-foreground) 94%, white 16%) 50%,
+    color-mix(in oklab, var(--muted-foreground) 62%, transparent) 66%,
+    color-mix(in oklab, var(--muted-foreground) 62%, transparent) 100%
+  );
+  background-size: 260% 100%;
+  background-position: 130% 0;
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: tool-call-shimmer 1.35s linear infinite;
+}
+
+@keyframes tool-call-shimmer {
+  to {
+    background-position: -130% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tool-call-shimmer {
+    animation: none;
+    color: inherit;
+    background-image: none;
+  }
+}
+
 :root {
   color-scheme: light;
   --radius: 0.625rem;

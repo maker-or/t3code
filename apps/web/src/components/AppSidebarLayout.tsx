@@ -1,5 +1,5 @@
-import { useEffect, type CSSProperties, type ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, type CSSProperties, type ReactNode } from "react";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 
 import ThreadSidebar from "./Sidebar";
 import { Sidebar, SidebarProvider, SidebarRail } from "./ui/sidebar";
@@ -11,8 +11,26 @@ import {
 const THREAD_SIDEBAR_WIDTH_STORAGE_KEY = "chat_thread_sidebar_width";
 const THREAD_SIDEBAR_MIN_WIDTH = 4 * 16;
 const THREAD_MAIN_CONTENT_MIN_WIDTH = 40 * 16;
+const SETTINGS_SIDEBAR_WIDTH = 13 * 16;
 export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isOnSettings = location.pathname.startsWith("/settings");
+
+  const { sidebarWidth, sidebarMaxWidth, sidebarMinWidth } = useMemo(() => {
+    if (isOnSettings) {
+      return {
+        sidebarWidth: SETTINGS_SIDEBAR_WIDTH,
+        sidebarMaxWidth: SETTINGS_SIDEBAR_WIDTH,
+        sidebarMinWidth: SETTINGS_SIDEBAR_WIDTH,
+      };
+    }
+    return {
+      sidebarWidth: THREAD_SIDEBAR_MIN_WIDTH,
+      sidebarMaxWidth: THREAD_SIDEBAR_MIN_WIDTH,
+      sidebarMinWidth: THREAD_SIDEBAR_MIN_WIDTH,
+    };
+  }, [isOnSettings]);
 
   useEffect(() => {
     const onWindowKeyDown = (event: KeyboardEvent) => {
@@ -57,7 +75,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
     <SidebarProvider
       className="h-dvh! min-h-0!"
       defaultOpen
-      style={{ "--sidebar-width": `${THREAD_SIDEBAR_MIN_WIDTH}px` } as CSSProperties}
+      style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}
     >
       <div
         aria-hidden="true"
@@ -65,20 +83,24 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
       />
       <Sidebar
         side="left"
-        collapsible="none"
+        collapsible={isOnSettings ? "none" : "none"}
         className="h-[90dvh] border-r border-border bg-card text-foreground"
         style={
           {
-            "--sidebar-width": `${THREAD_SIDEBAR_MIN_WIDTH}px`,
+            "--sidebar-width": `${sidebarWidth}px`,
           } as CSSProperties
         }
-        resizable={{
-          maxWidth: THREAD_SIDEBAR_MIN_WIDTH,
-          minWidth: THREAD_SIDEBAR_MIN_WIDTH,
-          shouldAcceptWidth: ({ nextWidth, wrapper }) =>
-            wrapper.clientWidth - nextWidth >= THREAD_MAIN_CONTENT_MIN_WIDTH,
-          storageKey: THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
-        }}
+        resizable={
+          isOnSettings
+            ? false
+            : {
+                maxWidth: sidebarMaxWidth,
+                minWidth: sidebarMinWidth,
+                shouldAcceptWidth: ({ nextWidth, wrapper }) =>
+                  wrapper.clientWidth - nextWidth >= THREAD_MAIN_CONTENT_MIN_WIDTH,
+                storageKey: THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
+              }
+        }
       >
         <ThreadSidebar />
         <SidebarRail />

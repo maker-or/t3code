@@ -1,5 +1,6 @@
 import { DiffsHighlighter, getSharedHighlighter, SupportedLanguages } from "@pierre/diffs";
 import { CheckIcon, CopyIcon } from "lucide-react";
+import { gsap } from "gsap";
 import React, {
   Children,
   Suspense,
@@ -9,6 +10,7 @@ import React, {
   useCallback,
   memo,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -26,6 +28,7 @@ import { resolveDiffThemeName, type DiffThemeName } from "../lib/diffRendering";
 import { fnv1a32 } from "../lib/diffRendering";
 import { LRUCache } from "../lib/lruCache";
 import { useTheme } from "../hooks/useTheme";
+import { useStreamingReveal } from "../hooks/useStreamingReveal";
 import {
   normalizeMarkdownLinkDestination,
   resolveMarkdownFileLinkMeta,
@@ -509,6 +512,16 @@ function areMarkdownFileLinkPropsEqual(
 
 function ChatMarkdown({ text, cwd, isStreaming = false }: ChatMarkdownProps) {
   const { resolvedTheme } = useTheme();
+  // Buffer large text chunks so they reveal progressively instead of
+  // dumping everything at once. Normal token-by-token streaming passes
+  // through instantly; only jumps >15 chars get smoothed.
+  const revealedText = useStreamingReveal(text, isStreaming);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const previousTextRef = useRef(text);
+  /** Timestamp (via performance.now) of the last animation start. Used to
+   *  debounce: during rapid token streaming the animation plays through once
+   *  rather than being killed and restarted every ~50ms (which made it invisible). */
+  const lastAnimStartRef = useRef(0);
   const diffThemeName = resolveDiffThemeName(resolvedTheme);
   const markdownFileLinkMetaByHref = useMemo(() => {
     const metaByHref = new Map<
@@ -532,6 +545,67 @@ function ChatMarkdown({ text, cwd, isStreaming = false }: ChatMarkdownProps) {
   const markdownUrlTransform = useCallback((href: string) => {
     return rewriteMarkdownFileUriHref(href) ?? defaultUrlTransform(href);
   }, []);
+  useLayoutEffect(() => {
+    const content = contentRef.current;
+    if (!content) {
+      previousTextRef.current = text;
+      return;
+    }
+
+    const previousText = previousTextRef.current;
+    previousTextRef.current = text;
+
+    if (!isStreaming || text.length <= previousText.length) {
+      // Reset tracker when streaming ends so the next session starts fresh
+      if (!isStreaming) {
+        lastAnimStartRef.current = 0;
+      }
+      return;
+    }
+
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return;
+    }
+
+    // Debounce: let the current animation play through before starting a new
+    // one. Without this, every token (~30-100ms apart) kills the in-progress
+    // animation and restarts it, so it never visually completes — the content
+    // just flickers at opacity 0.6. A new animation fires only:
+    //   • on the very first streaming chunk (lastAnimStartRef is 0)
+    //   • after a meaningful pause >= 400ms (e.g. post-tool-call text resume)
+    const now = performance.now();
+    const elapsed = now - lastAnimStartRef.current;
+    if (lastAnimStartRef.current > 0 && elapsed < 400) {
+      return;
+    }
+
+    // soft-blur-in spec adapted for streaming body text:
+    // - easing: expo.out (GSAP equivalent of the spec's cubic-bezier(0.22, 1, 0.36, 1))
+    // - blur: 6px (usage_notes recommends reducing from 12 for <24px text)
+    // - y: 8px (scaled down from spec's 16px for streaming cadence)
+    // - duration: 0.55s (balances spec's 0.9s premium feel with streaming speed)
+    lastAnimStartRef.current = now;
+    gsap.killTweensOf(content);
+    gsap.fromTo(
+      content,
+      {
+        opacity: 0.6,
+        y: 8,
+        filter: "blur(6px)",
+      },
+      {
+        opacity: 1,
+        y: 0,
+        filter: "blur(0px)",
+        duration: 0.55,
+        ease: "expo.out",
+        overwrite: true,
+      },
+    );
+  }, [isStreaming, text]);
   const markdownComponents = useMemo<Components>(
     () => ({
       a({ node: _node, href, ...props }) {
@@ -597,13 +671,15 @@ function ChatMarkdown({ text, cwd, isStreaming = false }: ChatMarkdownProps) {
 
   return (
     <div className="chat-markdown w-full min-w-0 text-sm leading-relaxed text-foreground/80">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={markdownComponents}
-        urlTransform={markdownUrlTransform}
-      >
-        {text}
-      </ReactMarkdown>
+      <div ref={contentRef} className="will-change-[transform,filter,opacity]">
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={markdownComponents}
+          urlTransform={markdownUrlTransform}
+        >
+          {revealedText}
+        </ReactMarkdown>
+      </div>
     </div>
   );
 }

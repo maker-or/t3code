@@ -59,6 +59,7 @@ export interface WorkLogEntry {
   toolTitle?: string;
   itemType?: ToolLifecycleItemType;
   requestKind?: PendingApproval["requestKind"];
+  status?: "running" | "completed";
 }
 
 interface DerivedWorkLogEntry extends WorkLogEntry {
@@ -575,6 +576,15 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
   if (requestKind) {
     entry.requestKind = requestKind;
   }
+  if (
+    activity.kind.endsWith(".started") ||
+    activity.kind.endsWith(".progress") ||
+    activity.kind.endsWith(".updated")
+  ) {
+    entry.status = "running";
+  } else if (activity.kind.endsWith(".completed") || activity.kind.endsWith(".resolved")) {
+    entry.status = "completed";
+  }
   if (toolCallId) {
     entry.toolCallId = toolCallId;
   }
@@ -636,6 +646,7 @@ function mergeDerivedWorkLogEntries(
   const toolTitle = next.toolTitle ?? previous.toolTitle;
   const itemType = next.itemType ?? previous.itemType;
   const requestKind = next.requestKind ?? previous.requestKind;
+  const status = next.status ?? previous.status;
   const collapseKey = next.collapseKey ?? previous.collapseKey;
   const toolCallId = next.toolCallId ?? previous.toolCallId;
   return {
@@ -648,6 +659,7 @@ function mergeDerivedWorkLogEntries(
     ...(toolTitle ? { toolTitle } : {}),
     ...(itemType ? { itemType } : {}),
     ...(requestKind ? { requestKind } : {}),
+    ...(status ? { status } : {}),
     ...(collapseKey ? { collapseKey } : {}),
     ...(toolCallId ? { toolCallId } : {}),
   };

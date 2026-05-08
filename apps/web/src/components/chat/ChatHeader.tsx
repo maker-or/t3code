@@ -12,7 +12,7 @@ import { memo, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import GitActionsControl from "../GitActionsControl";
 import { type DraftId } from "~/composerDraftStore";
-import { GearSixIcon, PlusMinusIcon, TerminalIcon } from "@phosphor-icons/react";
+import { PlusMinusIcon, TerminalIcon } from "@phosphor-icons/react";
 import { Badge } from "../ui/badge";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import ProjectScriptsControl, { type NewProjectScriptInput } from "../ProjectScriptsControl";
@@ -180,23 +180,6 @@ export const ChatHeader = memo(function ChatHeader({
         )}
       </div>
       <div className="fixed right-3 bottom-[calc(5dvh-18px)] z-40 flex h-10 shrink-0 items-center justify-end gap-2">
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <button
-                type="button"
-                aria-label="Settings"
-                className={DOCK_ICON_BUTTON_CLASS_NAME}
-                onClick={() => {
-                  void navigate({ to: "/settings" });
-                }}
-              />
-            }
-          >
-            <GearSixIcon aria-hidden="true" size={22} />
-          </TooltipTrigger>
-          <TooltipPopup side="top">Settings</TooltipPopup>
-        </Tooltip>
         {activeProjectScripts && (
           <ProjectScriptsControl
             scripts={activeProjectScripts}
