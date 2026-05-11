@@ -83,8 +83,12 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
       />
       <Sidebar
         side="left"
-        collapsible={isOnSettings ? "none" : "none"}
-        className="h-[90dvh] border-r border-border bg-card text-foreground"
+        collapsible="none"
+        className={
+          isOnSettings
+            ? "relative z-10 h-dvh border-r border-border bg-card text-foreground"
+            : "h-[90dvh] border-r border-border bg-card text-foreground"
+        }
         style={
           {
             "--sidebar-width": `${sidebarWidth}px`,

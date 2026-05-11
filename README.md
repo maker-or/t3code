@@ -14,8 +14,10 @@ T3 Code is a minimal web GUI for coding agents (currently Codex, Claude, and Ope
 
 ### Run without installing
 
+Requires **Node.js 22.19+** (or current Node 24). Older 22.x releases fail on startup (`undici` / engine checks).
+
 ```bash
-npx t3
+npx @polarish/agent
 ```
 
 ### Desktop app

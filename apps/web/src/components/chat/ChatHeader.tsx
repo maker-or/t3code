@@ -23,6 +23,7 @@ import { selectSidebarThreadsForProjectRefs, useStore } from "../../store";
 import { buildThreadRouteParams } from "../../threadRoutes";
 import { useNewThreadHandler } from "../../hooks/useHandleNewThread";
 import type { SidebarThreadSummary } from "../../types";
+import { ThreadRunningIndicator } from "./ThreadRunningIndicator";
 
 const EMPTY_THREAD_SUMMARIES: readonly SidebarThreadSummary[] = [];
 const DOCK_ICON_BUTTON_CLASS_NAME =
@@ -34,6 +35,7 @@ interface ChatHeaderProps {
   draftId?: DraftId;
   activeProjectId: ProjectId | undefined;
   activeProjectName: string | undefined;
+  threadRunning: boolean;
   isGitRepo: boolean;
   openInCwd: string | null;
   activeProjectScripts: ProjectScript[] | undefined;
@@ -72,6 +74,7 @@ export const ChatHeader = memo(function ChatHeader({
   draftId,
   activeProjectId,
   activeProjectName,
+  threadRunning,
   isGitRepo,
   openInCwd,
   activeProjectScripts,
@@ -137,14 +140,15 @@ export const ChatHeader = memo(function ChatHeader({
                   environmentId: thread.environmentId,
                   threadId: thread.id,
                 })}
-                className={`max-w-48 shrink-0 truncate px-2.5 py-1 text-xs transition-colors ${
+                className={`flex max-w-48 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs transition-colors ${
                   selected
-                    ? "bg-accent text-foreground"
+                    ? "bg-[#101110] px-3.5 py-2 text-foreground"
                     : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                 }`}
                 title={thread.title}
               >
-                {thread.title}
+                {selected && threadRunning ? <ThreadRunningIndicator active /> : null}
+                <span className="truncate">{thread.title}</span>
               </Link>
             );
           })}
@@ -180,7 +184,7 @@ export const ChatHeader = memo(function ChatHeader({
         )}
       </div>
       <div className="fixed right-3 bottom-[calc(5dvh-18px)] z-40 flex h-10 shrink-0 items-center justify-end gap-2">
-        {activeProjectScripts && (
+        {/*{activeProjectScripts && (
           <ProjectScriptsControl
             scripts={activeProjectScripts}
             keybindings={keybindings}
@@ -192,8 +196,8 @@ export const ChatHeader = memo(function ChatHeader({
             dockIconOnly
             dockIconButtonClassName={DOCK_ICON_BUTTON_CLASS_NAME}
           />
-        )}
-        {showOpenInPicker && (
+        )}*/}
+        {/*{showOpenInPicker && (
           <OpenInPicker
             keybindings={keybindings}
             availableEditors={availableEditors}
@@ -201,16 +205,19 @@ export const ChatHeader = memo(function ChatHeader({
             iconOnly
             iconButtonClassName={DOCK_ICON_BUTTON_CLASS_NAME}
           />
-        )}
-        {activeProjectName && (
+        )}*/}
+        {/*{activeProjectName && (
           <GitActionsControl
             gitCwd={gitCwd}
-            activeThreadRef={scopeThreadRef(activeThreadEnvironmentId, activeThreadId)}
+            activeThreadRef={scopeThreadRef(
+              activeThreadEnvironmentId,
+              activeThreadId,
+            )}
             {...(draftId ? { draftId } : {})}
             dockIconOnly
             dockIconButtonClassName={DOCK_ICON_BUTTON_CLASS_NAME}
           />
-        )}
+        )}*/}
         <Tooltip>
           <TooltipTrigger
             render={

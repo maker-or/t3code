@@ -83,6 +83,58 @@
   animation-duration: 0s !important;
 }
 
+/* Inline diff / terminal right dock — width eases the chat column; slide + fade for delight */
+:root {
+  --chat-dock-open-dur: 280ms;
+  --chat-dock-close-dur: 240ms;
+  --chat-dock-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --chat-dock-slide: 14px;
+  --chat-dock-target-w: clamp(360px, 42vw, 560px);
+}
+
+.chat-right-dock-shell {
+  width: 0;
+  opacity: 0;
+  transform: translateX(var(--chat-dock-slide));
+  transition:
+    width var(--chat-dock-close-dur) var(--chat-dock-ease),
+    opacity calc(var(--chat-dock-close-dur) * 0.88) var(--chat-dock-ease),
+    transform var(--chat-dock-close-dur) var(--chat-dock-ease);
+}
+
+.chat-right-dock-shell[data-open="true"] {
+  width: var(--chat-dock-target-w);
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    width var(--chat-dock-open-dur) var(--chat-dock-ease),
+    opacity calc(var(--chat-dock-open-dur) * 0.78) var(--chat-dock-ease),
+    transform var(--chat-dock-open-dur) var(--chat-dock-ease);
+}
+
+.chat-right-dock-surface {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-right-dock-shell {
+    --chat-dock-open-dur: 1ms;
+    --chat-dock-close-dur: 1ms;
+    transform: none !important;
+    transition:
+      width 1ms linear,
+      opacity 140ms ease !important;
+  }
+
+  .chat-right-dock-shell[data-open="true"] {
+    transition:
+      width 1ms linear,
+      opacity 140ms ease !important;
+  }
+}
+
 .tool-call-shimmer {
   background-image: linear-gradient(
     90deg,

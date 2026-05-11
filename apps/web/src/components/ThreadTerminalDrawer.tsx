@@ -790,6 +790,48 @@ export function TerminalViewport({
       window.cancelAnimationFrame(frame);
     };
   }, [drawerHeight, environmentId, resizeEpoch, terminalId, threadId]);
+
+  useEffect(() => {
+    const mount = containerRef.current;
+    const api = readEnvironmentApi(environmentId);
+    if (!mount || !api) {
+      return;
+    }
+
+    let raf = 0;
+    const fitToContainer = () => {
+      const activeTerminal = terminalRef.current;
+      const activeFit = fitAddonRef.current;
+      if (!activeTerminal || !activeFit) {
+        return;
+      }
+      window.cancelAnimationFrame(raf);
+      raf = window.requestAnimationFrame(() => {
+        const wasAtBottom =
+          activeTerminal.buffer.active.viewportY >= activeTerminal.buffer.active.baseY;
+        activeFit.fit();
+        if (wasAtBottom) {
+          activeTerminal.scrollToBottom();
+        }
+        void api.terminal
+          .resize({
+            threadId,
+            terminalId,
+            cols: activeTerminal.cols,
+            rows: activeTerminal.rows,
+          })
+          .catch(() => undefined);
+      });
+    };
+
+    const observer = new ResizeObserver(fitToContainer);
+    observer.observe(mount);
+    return () => {
+      window.cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
+  }, [environmentId, terminalId, threadId]);
+
   return (
     <div
       ref={containerRef}
@@ -1113,9 +1155,9 @@ export default function ThreadTerminalDrawer({
 
   return (
     <aside
-      className={`thread-terminal-drawer relative flex min-w-0 shrink-0 flex-col overflow-hidden bg-background ${
+      className={`thread-terminal-drawer relative flex min-h-0 min-w-0 w-full flex-col overflow-hidden bg-background ${
         layout === "panel"
-          ? "h-full w-[42vw] min-w-[360px] max-w-[560px] rounded-xl border-l border-border/80"
+          ? "min-h-0 flex-1 self-stretch rounded-xl border-l border-border/80"
           : "border-t border-border/80"
       }`}
       style={layout === "drawer" ? { height: `${drawerHeight}px` } : undefined}

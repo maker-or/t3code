@@ -1,6 +1,6 @@
 {
-  "name": "t3",
-  "version": "0.0.22",
+  "name": "@polarish/agent",
+  "version": "0.0.24",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -8,13 +8,18 @@
     "directory": "apps/server"
   },
   "bin": {
+    "agent": "./dist/bin.mjs",
     "t3": "./dist/bin.mjs"
   },
   "files": [
     "dist"
   ],
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
+    "prepublishOnly": "node ./scripts/assert-publishable-manifest.mjs",
     "dev": "node --watch src/bin.ts",
     "build": "node scripts/cli.ts build",
     "build:bundle": "tsdown",
@@ -50,6 +55,6 @@
     "vitest": "catalog:"
   },
   "engines": {
-    "node": "^22.16 || ^23.11 || >=24.10"
+    "node": ">=22.19.0"
   }
 }

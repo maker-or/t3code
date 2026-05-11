@@ -35,8 +35,9 @@ import {
 import { projectScriptCwd, projectScriptRuntimeEnv } from "@t3tools/shared/projectScripts";
 import { truncate } from "@t3tools/shared/String";
 import { Debouncer } from "@tanstack/react-pacer";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
+import { ChevronDownIcon, TriangleAlertIcon, WifiOffIcon } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useGitStatus } from "~/lib/gitStatusState";
 import { usePrimaryEnvironmentId } from "../environments/primary";
@@ -102,10 +103,17 @@ import { useMediaQuery } from "../hooks/useMediaQuery";
 import { RIGHT_PANEL_INLINE_LAYOUT_MEDIA_QUERY } from "../rightPanelLayout";
 import { BranchToolbar } from "./BranchToolbar";
 import { resolveShortcutCommand, shortcutLabelForCommand } from "../keybindings";
+import { DiffWorkerPoolProvider } from "./DiffWorkerPoolProvider";
+import {
+  DiffPanelHeaderSkeleton,
+  DiffPanelLoadingState,
+  DiffPanelShell,
+  type DiffPanelMode,
+} from "./DiffPanelShell";
+import { ChatRightDockPanel } from "./ChatRightDockPanel";
 import PlanSidebar from "./PlanSidebar";
 import ThreadTerminalDrawer from "./ThreadTerminalDrawer";
-import { ChevronDownIcon, TriangleAlertIcon, WifiOffIcon } from "lucide-react";
-import { cn, randomUUID } from "~/lib/utils";
+import { cn, newCommandId, newDraftId, newMessageId, newThreadId, randomUUID } from "~/lib/utils";
 import { stackedThreadToast, toastManager } from "./ui/toast";
 import { decodeProjectScriptKeybindingRule } from "~/lib/projectScriptKeybindings";
 import { type NewProjectScriptInput } from "./ProjectScriptsControl";
@@ -114,7 +122,6 @@ import {
   nextProjectScriptId,
   projectScriptIdFromCommand,
 } from "~/projectScripts";
-import { newCommandId, newDraftId, newMessageId, newThreadId } from "~/lib/utils";
 import { getProviderModelCapabilities, resolveSelectableProvider } from "../providerModels";
 import { useSettings } from "../hooks/useSettings";
 import { resolveAppModelSelectionForInstance } from "../modelSelection";
@@ -189,6 +196,26 @@ import {
   isVersionMismatchDismissed,
   resolveServerConfigVersionMismatch,
 } from "../versionSkew";
+
+const LazyDiffPanel = lazy(() => import("./DiffPanel"));
+
+function ChatInlineDiffPanelFallback(props: { readonly mode: DiffPanelMode }) {
+  return (
+    <DiffPanelShell mode={props.mode} header={<DiffPanelHeaderSkeleton />}>
+      <DiffPanelLoadingState label="Loading diff viewer..." />
+    </DiffPanelShell>
+  );
+}
+
+function ChatInlineDiffPanel(props: { readonly mode: DiffPanelMode }) {
+  return (
+    <DiffWorkerPoolProvider>
+      <Suspense fallback={<ChatInlineDiffPanelFallback mode={props.mode} />}>
+        <LazyDiffPanel mode={props.mode} />
+      </Suspense>
+    </DiffWorkerPoolProvider>
+  );
+}
 
 const IMAGE_ONLY_BOOTSTRAP_PROMPT =
   "[User attached one or more images without additional text. Respond using the conversation context and the attached image(s).]";
@@ -339,6 +366,10 @@ type ChatViewProps =
       reserveTitleBarControlInset?: boolean;
       routeKind: "server";
       draftId?: never;
+      /**
+       * `"inline-in-chat"`: same right column as the terminal (`w-[42vw]` …). `"sheet-route"`: host route renders sheet.
+       */
+      diffPresentation?: "inline-in-chat" | "sheet-route";
     }
   | {
       environmentId: EnvironmentId;
@@ -573,7 +604,7 @@ const PersistentThreadTerminalDrawer = memo(function PersistentThreadTerminalDra
   }
 
   return (
-    <div className={visible ? undefined : "hidden"}>
+    <div className={visible ? "flex min-h-0 w-full flex-1 flex-col" : "hidden"}>
       <ThreadTerminalDrawer
         threadRef={threadRef}
         threadId={threadId}
@@ -611,6 +642,8 @@ export default function ChatView(props: ChatViewProps) {
     onDiffPanelOpen,
     reserveTitleBarControlInset = true,
   } = props;
+  const diffPresentation =
+    routeKind === "server" ? (props.diffPresentation ?? "sheet-route") : "sheet-route";
   const draftId = routeKind === "draft" ? props.draftId : null;
   const routeThreadRef = useMemo(
     () => scopeThreadRef(environmentId, threadId),
@@ -658,7 +691,6 @@ export default function ChatView(props: ChatViewProps) {
     (store) => store.setTerminalContexts,
   );
   const setComposerDraftModelSelection = useComposerDraftStore((store) => store.setModelSelection);
-  const setComposerDraftRuntimeMode = useComposerDraftStore((store) => store.setRuntimeMode);
   const setComposerDraftInteractionMode = useComposerDraftStore(
     (store) => store.setInteractionMode,
   );
@@ -1662,6 +1694,12 @@ export default function ChatView(props: ChatViewProps) {
       : (storeServerTerminalLaunchContext ?? null);
   // Default true while loading to avoid toolbar flicker.
   const isGitRepo = gitStatusQuery.data?.isRepo ?? true;
+  const threadRunning =
+    activeThread?.session?.orchestrationStatus === "running" &&
+    activeThread.session.activeTurnId !== undefined &&
+    activeThread.session.activeTurnId === activeLatestTurn?.turnId;
+  const showInlineDiffPanel =
+    routeKind === "server" && diffPresentation === "inline-in-chat" && isGitRepo && diffOpen;
   const terminalShortcutLabelOptions = useMemo(
     () => ({
       context: {
@@ -1719,7 +1757,7 @@ export default function ChatView(props: ChatViewProps) {
       replace: true,
       search: (previous) => {
         const rest = stripDiffSearchParams(previous);
-        return diffOpen ? { ...rest, diff: undefined } : { ...rest, diff: "1" };
+        return diffOpen ? rest : { ...rest, diff: "1" };
       },
     });
   }, [
@@ -1820,10 +1858,7 @@ export default function ChatView(props: ChatViewProps) {
       void navigate({
         to: "/$environmentId/$threadId",
         params: { environmentId, threadId },
-        search: (previous) => ({
-          ...stripDiffSearchParams(previous),
-          diff: undefined,
-        }),
+        search: (previous) => stripDiffSearchParams(previous),
       });
     }
   }, [
@@ -2124,25 +2159,6 @@ export default function ChatView(props: ChatViewProps) {
       }
     },
     [activeProject, persistProjectScripts],
-  );
-
-  const handleRuntimeModeChange = useCallback(
-    (mode: RuntimeMode) => {
-      if (mode === runtimeMode) return;
-      setComposerDraftRuntimeMode(composerDraftTarget, mode);
-      if (isLocalDraftThread) {
-        setDraftThreadContext(composerDraftTarget, { runtimeMode: mode });
-      }
-      scheduleComposerFocus();
-    },
-    [
-      isLocalDraftThread,
-      runtimeMode,
-      scheduleComposerFocus,
-      composerDraftTarget,
-      setComposerDraftRuntimeMode,
-      setDraftThreadContext,
-    ],
   );
 
   const handleInteractionModeChange = useCallback(
@@ -3567,7 +3583,6 @@ export default function ChatView(props: ChatViewProps) {
           sidebarProposedPlan={sidebarProposedPlan as { turnId?: TurnId } | null}
           planSidebarLabel={planSidebarLabel}
           planSidebarOpen={planSidebarOpen}
-          runtimeMode={runtimeMode}
           interactionMode={interactionMode}
           lockedProvider={lockedProvider}
           providerStatuses={providerStatuses as ServerProvider[]}
@@ -3595,7 +3610,6 @@ export default function ChatView(props: ChatViewProps) {
           onChangeActivePendingUserInputCustomAnswer={onChangeActivePendingUserInputCustomAnswer}
           onProviderModelSelect={onProviderModelSelect}
           toggleInteractionMode={toggleInteractionMode}
-          handleRuntimeModeChange={handleRuntimeModeChange}
           handleInteractionModeChange={handleInteractionModeChange}
           togglePlanSidebar={togglePlanSidebar}
           focusComposer={focusComposer}
@@ -3655,6 +3669,7 @@ export default function ChatView(props: ChatViewProps) {
           {...(routeKind === "draft" && draftId ? { draftId } : {})}
           activeProjectId={activeProject?.id}
           activeProjectName={activeProject?.name}
+          threadRunning={threadRunning}
           isGitRepo={isGitRepo}
           openInCwd={gitCwd}
           activeProjectScripts={activeProject?.scripts}
@@ -3685,7 +3700,7 @@ export default function ChatView(props: ChatViewProps) {
         onDismiss={() => setThreadError(activeThread.id, null)}
       />
       {/* Main content area with optional plan sidebar */}
-      <div className="flex min-h-0 min-w-0 flex-1 gap-2 bg-[#000000] p-2">
+      <div className="flex min-h-0 min-w-0 flex-1 items-stretch gap-2 bg-[#000000] p-2">
         {/* Chat column */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl bg-[#0D0D0D]">
           {/* Messages Wrapper */}
@@ -3765,27 +3780,37 @@ export default function ChatView(props: ChatViewProps) {
             onClose={closePlanSidebar}
           />
         ) : null}
-        {!diffOpen
-          ? mountedTerminalThreadRefs.map(
-              ({ key: mountedThreadKey, threadRef: mountedThreadRef }) =>
-                mountedThreadKey === activeThreadKey && terminalState.terminalOpen ? (
-                  <PersistentThreadTerminalDrawer
-                    key={mountedThreadKey}
-                    threadRef={mountedThreadRef}
-                    threadId={mountedThreadRef.threadId}
-                    visible
-                    launchContext={activeTerminalLaunchContext ?? null}
-                    focusRequestId={terminalFocusRequestId}
-                    splitShortcutLabel={splitTerminalShortcutLabel ?? undefined}
-                    newShortcutLabel={newTerminalShortcutLabel ?? undefined}
-                    closeShortcutLabel={closeTerminalShortcutLabel ?? undefined}
-                    keybindings={keybindings}
-                    onAddTerminalContext={addTerminalContextToDraft}
-                    layout="panel"
-                  />
-                ) : null,
+        <ChatRightDockPanel active={showInlineDiffPanel}>
+          <ChatInlineDiffPanel mode="inline" />
+        </ChatRightDockPanel>
+        <ChatRightDockPanel
+          active={
+            !diffOpen &&
+            mountedTerminalThreadRefs.some(
+              ({ key: mountedThreadKey }) =>
+                mountedThreadKey === activeThreadKey && terminalState.terminalOpen,
             )
-          : null}
+          }
+        >
+          {mountedTerminalThreadRefs.map(({ key: mountedThreadKey, threadRef: mountedThreadRef }) =>
+            mountedThreadKey === activeThreadKey && terminalState.terminalOpen ? (
+              <PersistentThreadTerminalDrawer
+                key={mountedThreadKey}
+                threadRef={mountedThreadRef}
+                threadId={mountedThreadRef.threadId}
+                visible
+                launchContext={activeTerminalLaunchContext ?? null}
+                focusRequestId={terminalFocusRequestId}
+                splitShortcutLabel={splitTerminalShortcutLabel ?? undefined}
+                newShortcutLabel={newTerminalShortcutLabel ?? undefined}
+                closeShortcutLabel={closeTerminalShortcutLabel ?? undefined}
+                keybindings={keybindings}
+                onAddTerminalContext={addTerminalContextToDraft}
+                layout="panel"
+              />
+            ) : null,
+          )}
+        </ChatRightDockPanel>
       </div>
       {/* end horizontal flex container */}
 

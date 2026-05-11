@@ -67,8 +67,8 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
   }, [canGoBack, isMobile, navigate, setOpenMobile]);
 
   return (
-    <>
-      <SidebarContent className="overflow-x-hidden">
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      <SidebarContent className="flex-1 overflow-x-hidden">
         <SidebarGroup className="px-2 py-3">
           <SidebarMenu>
             {SETTINGS_NAV_ITEMS.map((item) => {
@@ -103,7 +103,7 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
       </SidebarContent>
 
       <SidebarSeparator />
-      <SidebarFooter className="p-2">
+      <SidebarFooter className="shrink-0 p-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -117,6 +117,6 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
-    </>
+    </div>
   );
 }

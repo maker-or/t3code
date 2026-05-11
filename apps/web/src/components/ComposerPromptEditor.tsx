@@ -1616,7 +1616,7 @@ function ComposerPromptEditorInner({
 
   return (
     <ComposerTerminalContextActionsContext.Provider value={terminalContextActions}>
-      <div className="relative">
+      <div className="relative group">
         <PlainTextPlugin
           contentEditable={
             <ContentEditable
@@ -1632,8 +1632,9 @@ function ComposerPromptEditorInner({
           }
           placeholder={
             terminalContexts.length > 0 ? null : (
-              <div className="pointer-events-none absolute inset-0 text-[16px] leading-relaxed text-muted-foreground/35 sm:text-[14px]">
-                {placeholder}
+              <div className="pointer-events-none absolute inset-0 flex items-start text-[16px] leading-relaxed text-muted-foreground/35 sm:text-[14px]">
+                <span className="mr-[2px] mt-[0.1em] inline-block h-[1.2em] w-[1ch] animate-pulse bg-foreground/60 group-focus-within:hidden" />
+                <span>{placeholder}</span>
               </div>
             )
           }

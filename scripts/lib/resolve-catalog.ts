@@ -29,3 +29,20 @@ export function resolveCatalogDependencies(
     }),
   );
 }
+
+/** Fail fast if any dependency spec is not installable from the npm registry (e.g. `catalog:`, `workspace:*`). */
+export function assertRegistryDependencySpecs(
+  dependencies: Record<string, string>,
+  label: string,
+): void {
+  for (const [name, spec] of Object.entries(dependencies)) {
+    if (typeof spec !== "string") {
+      throw new Error(`${label}: dependency '${name}' has non-string spec.`);
+    }
+    if (spec.startsWith("catalog:") || spec.startsWith("workspace:")) {
+      throw new Error(
+        `${label}: dependency '${name}' still has monorepo spec '${spec}'. Publishing would break npm/bun installs.`,
+      );
+    }
+  }
+}

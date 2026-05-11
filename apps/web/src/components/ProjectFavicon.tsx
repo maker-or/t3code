@@ -2,6 +2,7 @@ import { useEffect, useRef, memo } from "react";
 import { gsap } from "gsap";
 import type { CSSProperties } from "react";
 import type { EnvironmentId } from "@t3tools/contracts";
+import { playTapSound, snd, Snd } from "../lib/sound";
 
 const ACTIVE_PROJECT_ICON_COLOR_SETS = [
   { primary: "#506546", secondary: "#132E1E", text: "#6D9C4D" },
@@ -87,7 +88,12 @@ export const ProjectFavicon = memo(function ProjectFavicon(input: {
     <span
       ref={spanRef}
       aria-hidden="true"
-      className={`inline-flex shrink-0 items-center justify-center rounded-[4px] bg-[linear-gradient(180deg,var(--project-icon-primary)_0%,var(--project-icon-secondary)_100%)] leading-none text-[var(--project-icon-text)] tracking-[-0.04em] ${input.className ?? ""}`}
+      onMouseEnter={playTapSound}
+      onClick={() => {
+        snd.stop(Snd.SOUNDS.TAP);
+        snd.play(Snd.SOUNDS.BUTTON, { volume: 0.2 });
+      }}
+      className={`cursor-pointer inline-flex shrink-0 items-center justify-center rounded-[4px] bg-[linear-gradient(180deg,var(--project-icon-primary)_0%,var(--project-icon-secondary)_100%)] leading-none text-[var(--project-icon-text)] tracking-[-0.04em] ${input.className ?? ""}`}
     >
       {initialsForProject(label)}
     </span>

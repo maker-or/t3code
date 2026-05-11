@@ -6,11 +6,13 @@ export interface ExpandedImageItem {
 export interface ExpandedImagePreview {
   images: ExpandedImageItem[];
   index: number;
+  originRect?: DOMRect;
 }
 
 export function buildExpandedImagePreview(
   images: ReadonlyArray<{ id: string; name: string; previewUrl?: string }>,
   selectedImageId: string,
+  originRect?: DOMRect,
 ): ExpandedImagePreview | null {
   const previewableImages = images.flatMap((image) =>
     image.previewUrl ? [{ id: image.id, src: image.previewUrl, name: image.name }] : [],
@@ -28,5 +30,6 @@ export function buildExpandedImagePreview(
       name: image.name,
     })),
     index: selectedIndex,
+    originRect,
   };
 }

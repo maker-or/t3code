@@ -10,7 +10,10 @@ import {
   DEVELOPMENT_ICON_OVERRIDES,
   PUBLISH_ICON_OVERRIDES,
 } from "../../../scripts/lib/brand-assets.ts";
-import { resolveCatalogDependencies } from "../../../scripts/lib/resolve-catalog.ts";
+import {
+  assertRegistryDependencySpecs,
+  resolveCatalogDependencies,
+} from "../../../scripts/lib/resolve-catalog.ts";
 import rootPackageJson from "../../../package.json" with { type: "json" };
 import serverPackageJson from "../package.json" with { type: "json" };
 
@@ -27,7 +30,9 @@ interface PackageJson {
   engines: Record<string, string>;
   files: string[];
   dependencies: Record<string, string>;
-  overrides: Record<string, string>;
+  publishConfig: {
+    readonly access: "public";
+  };
 }
 
 class CliError extends Data.TaggedError("CliError")<{
@@ -179,6 +184,8 @@ const publishCmd = Command.make(
     tag: Flag.string("tag").pipe(Flag.withDefault("latest")),
     access: Flag.string("access").pipe(Flag.withDefault("public")),
     appVersion: Flag.string("app-version").pipe(Flag.optional),
+    /** When npm account 2FA is enabled, pass the authenticator code (same as `npm publish --otp=`). */
+    otp: Flag.string("otp").pipe(Flag.optional),
     provenance: Flag.boolean("provenance").pipe(Flag.withDefault(false)),
     dryRun: Flag.boolean("dry-run").pipe(Flag.withDefault(false)),
     verbose: Flag.boolean("verbose").pipe(Flag.withDefault(false)),
@@ -206,6 +213,13 @@ const publishCmd = Command.make(
         // Acquire: backup package.json, resolve catalog dependencies, and strip devDependencies/scripts
         Effect.gen(function* () {
           const version = Option.getOrElse(config.appVersion, () => serverPackageJson.version);
+          const dependencies = resolveCatalogDependencies(
+            serverPackageJson.dependencies,
+            rootPackageJson.workspaces.catalog,
+            "apps/server",
+          );
+          assertRegistryDependencySpecs(dependencies, "apps/server dependencies");
+
           const pkg: PackageJson = {
             name: serverPackageJson.name,
             repository: serverPackageJson.repository,
@@ -214,16 +228,8 @@ const publishCmd = Command.make(
             version,
             engines: serverPackageJson.engines,
             files: serverPackageJson.files,
-            dependencies: resolveCatalogDependencies(
-              serverPackageJson.dependencies,
-              rootPackageJson.workspaces.catalog,
-              "apps/server",
-            ),
-            overrides: resolveCatalogDependencies(
-              rootPackageJson.overrides,
-              rootPackageJson.workspaces.catalog,
-              "apps/server",
-            ),
+            dependencies,
+            publishConfig: { access: "public" },
           };
 
           const original = yield* fs.readFileString(packageJsonPath);
@@ -240,8 +246,14 @@ const publishCmd = Command.make(
             const args = ["publish", "--access", config.access, "--tag", config.tag];
             if (config.provenance) args.push("--provenance");
             if (config.dryRun) args.push("--dry-run");
+            if (Option.isSome(config.otp)) {
+              args.push(`--otp=${config.otp.value}`);
+            }
 
-            yield* Effect.log(`[cli] Running: npm ${args.join(" ")}`);
+            const logArgs = Option.isSome(config.otp)
+              ? [...args.slice(0, -1), "--otp=<redacted>"]
+              : args;
+            yield* Effect.log(`[cli] Running: npm ${logArgs.join(" ")}`);
             yield* runCommand(
               ChildProcess.make("npm", [...args], {
                 cwd: serverDir,

@@ -256,7 +256,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   // from TimelineRowCtx, which propagates through LegendList's memo.
   const renderItem = useCallback(
     ({ item }: { item: MessagesTimelineRow }) => (
-      <div className="mx-auto w-full min-w-0 max-w-3xl overflow-x-hidden" data-timeline-root="true">
+      <div className="mx-auto w-full min-w-0 max-w-6xl overflow-x-hidden" data-timeline-root="true">
         <TimelineRowContent row={item} />
       </div>
     ),
@@ -266,7 +266,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   const listFooter = useMemo(
     () => (
       <>
-        {composer}
+        <div className="mx-auto w-full min-w-0 max-w-6xl">{composer}</div>
         {TIMELINE_LIST_FOOTER}
       </>
     ),
@@ -276,7 +276,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   if (rows.length === 0 && !isWorking) {
     return (
       <div className="h-full overflow-y-auto px-3 sm:px-5">
-        <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col pt-16 pb-8">
+        <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col pt-4 pb-8">
           {composer}
         </div>
       </div>
@@ -410,8 +410,9 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
                       type="button"
                       className="h-full w-full cursor-zoom-in"
                       aria-label={`Preview ${image.name}`}
-                      onClick={() => {
-                        const preview = buildExpandedImagePreview(userImages, image.id);
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const preview = buildExpandedImagePreview(userImages, image.id, rect);
                         if (!preview) return;
                         ctx.onImageExpand(preview);
                       }}

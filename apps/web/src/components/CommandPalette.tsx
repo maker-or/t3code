@@ -3,12 +3,15 @@
 import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime";
 import {
   DEFAULT_MODEL,
+  type EditorId,
   type EnvironmentId,
   type FilesystemBrowseResult,
   type ProjectId,
   ProviderInstanceId,
+  type RuntimeMode,
   type SourceControlDiscoveryResult,
   type SourceControlProviderKind,
+  type ScopedThreadRef,
   type SourceControlRepositoryInfo,
 } from "@t3tools/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,10 +21,13 @@ import {
   ArrowDownIcon,
   ArrowLeftIcon,
   ArrowUpIcon,
+  CheckIcon,
   CornerLeftUpIcon,
+  ExternalLinkIcon,
   FolderIcon,
   FolderPlusIcon,
   LinkIcon,
+  LockOpenIcon,
   MessageSquareIcon,
   SettingsIcon,
   SquarePenIcon,
@@ -39,6 +45,7 @@ import {
 } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useCommandPaletteStore } from "../commandPaletteStore";
+import { type DraftId, useComposerDraftStore } from "../composerDraftStore";
 import { readEnvironmentApi } from "../environmentApi";
 import { readPrimaryEnvironmentDescriptor, usePrimaryEnvironmentId } from "../environments/primary";
 import {
@@ -102,8 +109,12 @@ import { CommandPaletteResults } from "./CommandPaletteResults";
 import { AzureDevOpsIcon, BitbucketIcon, GitHubIcon, GitLabIcon } from "./Icons";
 import { ProjectFavicon } from "./ProjectFavicon";
 import { ThreadRowLeadingStatus, ThreadRowTrailingStatus } from "./ThreadStatusIndicators";
-import { useServerKeybindings } from "../rpc/serverState";
+import { useServerAvailableEditors, useServerKeybindings } from "../rpc/serverState";
 import { resolveShortcutCommand } from "../keybindings";
+import { usePreferredEditor } from "../editorPreferences";
+import { resolveOpenInPickerOptions } from "./chat/OpenInPicker.logic";
+import { runtimeModePresentationByMode } from "./chat/runtimeModePresentation";
+import { updateComposerRuntimeMode } from "../lib/composerRuntimeMode";
 import {
   Command,
   CommandDialog,
@@ -407,6 +418,23 @@ function OpenCommandPaletteDialog() {
   const projects = useStore(useShallow(selectProjectsAcrossEnvironments));
   const threads = useStore(useShallow(selectSidebarThreadsAcrossEnvironments));
   const keybindings = useServerKeybindings();
+  const routeTarget = useParams({
+    strict: false,
+    select: (params) => resolveThreadRouteTarget(params),
+  });
+  const composerDraftTarget: ScopedThreadRef | DraftId | null = routeTarget
+    ? routeTarget.kind === "server"
+      ? routeTarget.threadRef
+      : routeTarget.draftId
+    : null;
+  const isLocalDraftThread = routeTarget?.kind === "draft";
+  const composerRuntimeMode = useComposerDraftStore((store) =>
+    composerDraftTarget ? (store.getComposerDraft(composerDraftTarget)?.runtimeMode ?? null) : null,
+  );
+  const setComposerDraftRuntimeMode = useComposerDraftStore((store) => store.setRuntimeMode);
+  const setDraftThreadContext = useComposerDraftStore((store) => store.setDraftThreadContext);
+  const availableEditors = useServerAvailableEditors();
+  const [preferredEditor, setPreferredEditor] = usePreferredEditor(availableEditors);
   const [viewStack, setViewStack] = useState<CommandPaletteView[]>([]);
   const currentView = viewStack.at(-1) ?? null;
   const [browseGeneration, setBrowseGeneration] = useState(0);
@@ -523,6 +551,21 @@ function OpenCommandPaletteDialog() {
   const currentProjectCwd = currentProjectId
     ? (projectCwdById.get(currentProjectId) ?? null)
     : null;
+  const openInEditorOptions = useMemo(
+    () => resolveOpenInPickerOptions(navigator.platform, availableEditors),
+    [availableEditors],
+  );
+  const openInCurrentProjectEditor = useCallback(
+    (editorId: EditorId | null) => {
+      const api = readLocalApi();
+      if (!api || !currentProjectCwd) return;
+      const editor = editorId ?? preferredEditor;
+      if (!editor) return;
+      void api.shell.openInEditor(currentProjectCwd, editor);
+      setPreferredEditor(editor);
+    },
+    [currentProjectCwd, preferredEditor, setPreferredEditor],
+  );
   const currentProjectCwdForBrowse =
     browseEnvironmentId && currentProjectEnvironmentId === browseEnvironmentId
       ? currentProjectCwd
@@ -981,6 +1024,86 @@ function OpenCommandPaletteDialog() {
     openAddProjectFlow();
   }, [clearOpenIntent, openAddProjectFlow, openIntent]);
 
+  const openInEditorGroups = useMemo<CommandPaletteView["groups"]>(() => {
+    if (
+      !currentProjectCwd ||
+      openInEditorOptions.length === 0 ||
+      primaryEnvironmentId === null ||
+      currentProjectEnvironmentId !== primaryEnvironmentId
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        value: "editors",
+        label: "Editors",
+        items: openInEditorOptions.map((option) => ({
+          kind: "action" as const,
+          value: `action:open-in:${option.value}`,
+          searchTerms: [option.label, option.value, "open", "editor", "project"],
+          title: option.label,
+          icon: <option.Icon className={ITEM_ICON_CLASS} />,
+          run: async () => {
+            openInCurrentProjectEditor(option.value);
+          },
+        })),
+      },
+    ];
+  }, [
+    currentProjectCwd,
+    currentProjectEnvironmentId,
+    openInCurrentProjectEditor,
+    openInEditorOptions,
+    primaryEnvironmentId,
+  ]);
+
+  const runtimeModeGroups = useMemo<CommandPaletteView["groups"]>(() => {
+    if (!composerDraftTarget) {
+      return [];
+    }
+
+    return [
+      {
+        value: "access",
+        label: "Access",
+        items: (Object.keys(runtimeModePresentationByMode) as RuntimeMode[]).map((mode) => {
+          const option = runtimeModePresentationByMode[mode];
+          return {
+            kind: "action" as const,
+            value: `action:access:${mode}`,
+            searchTerms: [option.label, option.description, mode, "access", "runtime mode"],
+            title: option.label,
+            description: option.description,
+            icon: <option.icon className={ITEM_ICON_CLASS} />,
+            ...(composerRuntimeMode === mode
+              ? {
+                  titleTrailingContent: (
+                    <CheckIcon className="size-4 text-primary" aria-hidden="true" />
+                  ),
+                }
+              : {}),
+            run: async () => {
+              updateComposerRuntimeMode({
+                target: composerDraftTarget,
+                mode,
+                isLocalDraftThread,
+                setComposerDraftRuntimeMode,
+                setDraftThreadContext,
+              });
+            },
+          };
+        }),
+      },
+    ];
+  }, [
+    composerDraftTarget,
+    composerRuntimeMode,
+    isLocalDraftThread,
+    setComposerDraftRuntimeMode,
+    setDraftThreadContext,
+  ]);
+
   const actionItems: Array<CommandPaletteActionItem | CommandPaletteSubmenuItem> = [];
 
   if (projects.length > 0) {
@@ -1021,6 +1144,18 @@ function OpenCommandPaletteDialog() {
       addonIcon: <SquarePenIcon className={ADDON_ICON_CLASS} />,
       groups: [{ value: "projects", label: "Projects", items: projectThreadItems }],
     });
+
+    if (openInEditorGroups.length > 0) {
+      actionItems.push({
+        kind: "submenu",
+        value: "action:open-in-editor",
+        searchTerms: ["open in", "open editor", "editor", "open", "project"],
+        title: "Open in...",
+        icon: <ExternalLinkIcon className={ITEM_ICON_CLASS} />,
+        addonIcon: <ExternalLinkIcon className={ADDON_ICON_CLASS} />,
+        groups: openInEditorGroups,
+      });
+    }
   }
 
   actionItems.push({
@@ -1062,6 +1197,18 @@ function OpenCommandPaletteDialog() {
       await navigate({ to: "/settings" });
     },
   });
+
+  if (runtimeModeGroups.length > 0) {
+    actionItems.push({
+      kind: "submenu",
+      value: "action:access",
+      searchTerms: ["access", "runtime mode", "permissions", "full access"],
+      title: "Access",
+      icon: <LockOpenIcon className={ITEM_ICON_CLASS} />,
+      addonIcon: <LockOpenIcon className={ADDON_ICON_CLASS} />,
+      groups: runtimeModeGroups,
+    });
+  }
 
   const rootGroups = buildRootGroups({ actionItems, recentThreadItems });
   const activeGroups = currentView ? currentView.groups : rootGroups;
