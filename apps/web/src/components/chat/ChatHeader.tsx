@@ -142,7 +142,7 @@ export const ChatHeader = memo(function ChatHeader({
                 })}
                 className={`flex max-w-48 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs transition-colors ${
                   selected
-                    ? "bg-[#101110] px-3.5 py-2 text-foreground"
+                    ? "bg-[var(--surface-elevated)] px-3.5 py-2 text-foreground"
                     : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                 }`}
                 title={thread.title}

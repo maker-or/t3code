@@ -49,9 +49,9 @@ const DIFF_PANEL_UNSAFE_CSS = `
 [data-file],
 [data-error-wrapper],
 [data-virtualizer-buffer] {
-  --diffs-bg: color-mix(in srgb, var(--card) 90%, var(--background)) !important;
-  --diffs-light-bg: color-mix(in srgb, var(--card) 90%, var(--background)) !important;
-  --diffs-dark-bg: color-mix(in srgb, var(--card) 90%, var(--background)) !important;
+  --diffs-bg: var(--surface-subtle) !important;
+  --diffs-light-bg: var(--surface-subtle) !important;
+  --diffs-dark-bg: var(--surface-subtle) !important;
   --diffs-token-light-bg: transparent;
   --diffs-token-dark-bg: transparent;
 
@@ -78,7 +78,7 @@ const DIFF_PANEL_UNSAFE_CSS = `
 }
 
 [data-file-info] {
-  background-color: color-mix(in srgb, var(--card) 94%, var(--foreground)) !important;
+  background-color: var(--surface-subtle) !important;
   border-block-color: var(--border) !important;
   color: var(--foreground) !important;
 }
@@ -87,7 +87,7 @@ const DIFF_PANEL_UNSAFE_CSS = `
   position: sticky !important;
   top: 0;
   z-index: 4;
-  background-color: color-mix(in srgb, var(--card) 94%, var(--foreground)) !important;
+  background-color: var(--surface-subtle) !important;
   border-bottom: 1px solid var(--border) !important;
 }
 

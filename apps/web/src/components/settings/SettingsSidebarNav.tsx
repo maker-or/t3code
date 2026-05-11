@@ -2,6 +2,7 @@ import { useCallback, type ComponentType } from "react";
 import {
   ArchiveIcon,
   ArrowLeftIcon,
+  PaletteIcon,
   BotIcon,
   GitBranchIcon,
   KeyboardIcon,
@@ -22,6 +23,7 @@ import {
 } from "../ui/sidebar";
 
 export type SettingsSectionPath =
+  | "/settings/appearance"
   | "/settings/general"
   | "/settings/keybindings"
   | "/settings/providers"
@@ -34,6 +36,7 @@ export const SETTINGS_NAV_ITEMS: ReadonlyArray<{
   to: SettingsSectionPath;
   icon: ComponentType<{ className?: string }>;
 }> = [
+  { label: "Appearance", to: "/settings/appearance", icon: PaletteIcon },
   { label: "General", to: "/settings/general", icon: Settings2Icon },
   { label: "Keybindings", to: "/settings/keybindings", icon: KeyboardIcon },
   { label: "Providers", to: "/settings/providers", icon: BotIcon },

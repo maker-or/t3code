@@ -79,7 +79,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 bottom-0 h-[10dvh] bg-[#000000]"
+        className="pointer-events-none fixed inset-x-0 bottom-0 h-[10dvh] bg-[var(--surface-canvas)]"
       />
       <Sidebar
         side="left"

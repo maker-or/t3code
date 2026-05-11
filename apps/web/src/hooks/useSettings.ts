@@ -12,6 +12,7 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { ServerSettings, type ServerSettingsPatch } from "@t3tools/contracts";
 import {
+  DEFAULT_APPEARANCE_MODE,
   type ClientSettingsPatch,
   type ClientSettings,
   DEFAULT_CLIENT_SETTINGS,
@@ -22,6 +23,7 @@ import { ensureLocalApi } from "~/localApi";
 import { Struct } from "effect";
 import { applyServerSettingsPatch } from "@t3tools/shared/serverSettings";
 import { applySettingsUpdated, getServerConfig, useServerSettings } from "~/rpc/serverState";
+import { readLegacyBrowserThemePreference } from "~/clientPersistenceStorage";
 
 const CLIENT_SETTINGS_PERSISTENCE_ERROR_SCOPE = "[CLIENT_SETTINGS]";
 
@@ -91,8 +93,16 @@ async function hydrateClientSettings(): Promise<void> {
   const nextHydration = (async () => {
     try {
       const persistedSettings = await ensureLocalApi().persistence.getClientSettings();
-      if (persistedSettings) {
-        replaceClientSettingsSnapshot({ ...DEFAULT_CLIENT_SETTINGS, ...persistedSettings });
+      const legacyThemePreference = readLegacyBrowserThemePreference();
+      const migratedSettings =
+        persistedSettings &&
+        legacyThemePreference &&
+        persistedSettings.appearanceMode === undefined &&
+        DEFAULT_APPEARANCE_MODE === "system"
+          ? { ...persistedSettings, appearanceMode: legacyThemePreference }
+          : persistedSettings;
+      if (migratedSettings) {
+        replaceClientSettingsSnapshot({ ...DEFAULT_CLIENT_SETTINGS, ...migratedSettings });
       }
     } catch (error) {
       console.error(`${CLIENT_SETTINGS_PERSISTENCE_ERROR_SCOPE} hydrate failed`, error);

@@ -1,6 +1,6 @@
 # Remote Access
 
-Use this when you want to connect to a T3 Code server from another device such as a phone, tablet, or separate desktop app.
+Use this when you want to connect to a polarish server from another device such as a phone, tablet, or separate desktop app.
 
 ## Recommended Setup
 
@@ -103,7 +103,7 @@ npx @polarish/agent serve --tailscale-serve --tailscale-serve-port 8443
 
 ### Option 3: Desktop-Managed SSH Launch
 
-Use this when you want the desktop app to start or reuse T3 Code on another machine over SSH.
+Use this when you want the desktop app to start or reuse polarish on another machine over SSH.
 
 1. Open **Settings** → **Connections**.
 2. Under **Remote Environments**, choose **Add environment**.
@@ -139,7 +139,7 @@ Use hosted pairing when the backend is reachable from the browser over HTTPS/WSS
 
 Do not use hosted pairing for plain HTTP LAN URLs such as `http://192.168.x.y:3773`. Browsers block an HTTPS page from connecting to an insecure HTTP or WS backend. For those endpoints, use the direct pairing URL shown by the desktop app or CLI from a client that can open that HTTP URL directly.
 
-Hosted pairing does not proxy traffic through T3 Code. The browser still connects directly to the backend URL in the pairing link.
+Hosted pairing does not proxy traffic through polarish. The browser still connects directly to the backend URL in the pairing link.
 
 ## Managing Access Later
 

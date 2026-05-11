@@ -1,7 +1,7 @@
 import { ArchiveIcon, ArchiveX, LoaderIcon, PlusIcon, RefreshCwIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   defaultInstanceIdForDriver,
   type DesktopUpdateChannel,
@@ -12,7 +12,11 @@ import {
   type ScopedThreadRef,
 } from "@t3tools/contracts";
 import { scopeThreadRef } from "@t3tools/client-runtime";
-import { DEFAULT_UNIFIED_SETTINGS } from "@t3tools/contracts/settings";
+import {
+  DEFAULT_APPEARANCE_ACCENT_HUE,
+  DEFAULT_APPEARANCE_ACCENT_INTENSITY,
+  DEFAULT_UNIFIED_SETTINGS,
+} from "@t3tools/contracts/settings";
 import { createModelSelection } from "@t3tools/shared/model";
 import { Equal } from "effect";
 import { APP_VERSION } from "../../branding";
@@ -101,6 +105,12 @@ const TIMESTAMP_FORMAT_LABELS = {
   "24-hour": "24-hour",
 } as const;
 
+const APPEARANCE_HUE_MIN = 0;
+const APPEARANCE_HUE_MAX = 360;
+const APPEARANCE_INTENSITY_MIN = 0;
+const APPEARANCE_INTENSITY_MAX = 1;
+const APPEARANCE_INTENSITY_STEP = 0.01;
+
 const DEFAULT_DRIVER_KIND = ProviderDriverKind.make("codex");
 
 function withoutProviderInstanceKey<V>(
@@ -113,7 +123,10 @@ function withoutProviderInstanceKey<V>(
 }
 
 function withoutProviderInstanceFavorites(
-  favorites: ReadonlyArray<{ readonly provider: ProviderInstanceId; readonly model: string }>,
+  favorites: ReadonlyArray<{
+    readonly provider: ProviderInstanceId;
+    readonly model: string;
+  }>,
   instanceId: ProviderInstanceId,
 ) {
   return favorites.filter((favorite) => favorite.provider !== instanceId);
@@ -278,7 +291,10 @@ function AboutVersionSection() {
       ? !canCheckForUpdate(updateState)
       : isDesktopUpdateButtonDisabled(updateState);
 
-  const actionLabel: Record<string, string> = { download: "Download", install: "Install" };
+  const actionLabel: Record<string, string> = {
+    download: "Download",
+    install: "Install",
+  };
   const statusLabel: Record<string, string> = {
     checking: "Checking…",
     downloading: "Downloading…",
@@ -348,8 +364,103 @@ function AboutVersionSection() {
   );
 }
 
+function AppearancePreview() {
+  const previewItems = [
+    {
+      label: "Background",
+      className: "bg-background border border-border text-foreground",
+    },
+    {
+      label: "Card",
+      className: "bg-card border border-border text-card-foreground",
+    },
+    {
+      label: "Text",
+      className: "bg-foreground border border-foreground text-background",
+    },
+    {
+      label: "Primary",
+      className: "bg-primary border border-primary text-primary-foreground",
+    },
+    {
+      label: "Accent",
+      className: "bg-accent border border-border text-accent-foreground",
+    },
+    {
+      label: "Border",
+      className: "bg-background border-2 border-border text-muted-foreground",
+    },
+    {
+      label: "Focus",
+      className: "bg-background border border-ring ring-2 ring-ring/60 text-foreground",
+    },
+  ] as const;
+
+  return (
+    <div className="grid grid-cols-2 gap-2 pt-3 sm:grid-cols-4">
+      {previewItems.map((item) => (
+        <div
+          key={item.label}
+          className={`rounded-xl px-3 py-3 text-xs font-medium shadow-sm/5 ${item.className}`}
+        >
+          {item.label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AppearanceSlider({
+  value,
+  min,
+  max,
+  step,
+  onChange,
+  ariaLabel,
+  fill,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: number) => void;
+  ariaLabel: string;
+  fill: string;
+}) {
+  const progress = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
+
+  return (
+    <div className="mt-3 p-3">
+      <div className="relative h-14">
+        <div className="absolute inset-0 rounded-xl bg-[color-mix(in_oklab,var(--surface-elevated)_78%,var(--muted))]" />
+        <div
+          className="absolute inset-y-0 left-0 rounded-l-xl transition-[width] duration-200 ease-out"
+          style={
+            {
+              width: `${progress}%`,
+              background: fill,
+            } as CSSProperties
+          }
+        />
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onInput={(event) => onChange(Number(event.currentTarget.value))}
+          onChange={(event) => onChange(Number(event.currentTarget.value))}
+          aria-label={ariaLabel}
+          className="absolute inset-0 z-20 h-full w-full cursor-pointer appearance-none rounded-xl bg-transparent opacity-0"
+        />
+      </div>
+    </div>
+  );
+}
+
 export function useSettingsRestore(onRestored?: () => void) {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, accentHue, setAccentHue, accentIntensity, setAccentIntensity } =
+    useTheme();
   const settings = useSettings();
   const { updateSettings } = useUpdateSettings();
 
@@ -360,7 +471,9 @@ export function useSettingsRestore(onRestored?: () => void) {
 
   const changedSettingLabels = useMemo(
     () => [
-      ...(theme !== "system" ? ["Theme"] : []),
+      ...(theme !== "system" ? ["Appearance mode"] : []),
+      ...(accentHue !== DEFAULT_APPEARANCE_ACCENT_HUE ? ["Appearance hue"] : []),
+      ...(accentIntensity !== DEFAULT_APPEARANCE_ACCENT_INTENSITY ? ["Appearance intensity"] : []),
       ...(settings.timestampFormat !== DEFAULT_UNIFIED_SETTINGS.timestampFormat
         ? ["Time format"]
         : []),
@@ -402,6 +515,8 @@ export function useSettingsRestore(onRestored?: () => void) {
       settings.enableAssistantStreaming,
       settings.timestampFormat,
       theme,
+      accentHue,
+      accentIntensity,
     ],
   );
 
@@ -416,6 +531,8 @@ export function useSettingsRestore(onRestored?: () => void) {
     if (!confirmed) return;
 
     setTheme("system");
+    setAccentHue(DEFAULT_APPEARANCE_ACCENT_HUE);
+    setAccentIntensity(DEFAULT_APPEARANCE_ACCENT_INTENSITY);
     updateSettings({
       timestampFormat: DEFAULT_UNIFIED_SETTINGS.timestampFormat,
       diffWordWrap: DEFAULT_UNIFIED_SETTINGS.diffWordWrap,
@@ -429,7 +546,14 @@ export function useSettingsRestore(onRestored?: () => void) {
       textGenerationModelSelection: DEFAULT_UNIFIED_SETTINGS.textGenerationModelSelection,
     });
     onRestored?.();
-  }, [changedSettingLabels, onRestored, setTheme, updateSettings]);
+  }, [
+    changedSettingLabels,
+    onRestored,
+    setAccentHue,
+    setAccentIntensity,
+    setTheme,
+    updateSettings,
+  ]);
 
   return {
     changedSettingLabels,
@@ -438,7 +562,6 @@ export function useSettingsRestore(onRestored?: () => void) {
 }
 
 export function GeneralSettingsPanel() {
-  const { theme, setTheme } = useTheme();
   const settings = useSettings();
   const { updateSettings } = useUpdateSettings();
   const observability = useServerObservability();
@@ -477,39 +600,6 @@ export function GeneralSettingsPanel() {
   return (
     <SettingsPageContainer>
       <SettingsSection title="General">
-        <SettingsRow
-          title="Theme"
-          description="Choose how T3 Code looks across the app."
-          resetAction={
-            theme !== "system" ? (
-              <SettingResetButton label="theme" onClick={() => setTheme("system")} />
-            ) : null
-          }
-          control={
-            <Select
-              value={theme}
-              onValueChange={(value) => {
-                if (value === "system" || value === "light" || value === "dark") {
-                  setTheme(value);
-                }
-              }}
-            >
-              <SelectTrigger className="w-full sm:w-40" aria-label="Theme preference">
-                <SelectValue>
-                  {THEME_OPTIONS.find((option) => option.value === theme)?.label ?? "System"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectPopup align="end" alignItemWithTrigger={false}>
-                {THEME_OPTIONS.map((option) => (
-                  <SelectItem hideIndicator key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectPopup>
-            </Select>
-          }
-        />
-
         <SettingsRow
           title="Time format"
           description="System default follows your browser or OS clock preference."
@@ -874,6 +964,105 @@ export function GeneralSettingsPanel() {
   );
 }
 
+export function AppearanceSettingsPanel() {
+  const { theme, setTheme, accentHue, setAccentHue, accentIntensity, setAccentIntensity } =
+    useTheme();
+
+  return (
+    <SettingsPageContainer>
+      <SettingsSection title="Appearance">
+        <SettingsRow
+          title="Theme mode"
+          description="Choose whether the app follows your system appearance or stays pinned to light or dark mode."
+          resetAction={
+            theme !== "system" ? (
+              <SettingResetButton label="appearance mode" onClick={() => setTheme("system")} />
+            ) : null
+          }
+          control={
+            <Select
+              value={theme}
+              onValueChange={(value) => {
+                if (value === "system" || value === "light" || value === "dark") {
+                  setTheme(value);
+                }
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-40" aria-label="Theme preference">
+                <SelectValue>
+                  {THEME_OPTIONS.find((option) => option.value === theme)?.label ?? "System"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectPopup align="end" alignItemWithTrigger={false}>
+                {THEME_OPTIONS.map((option) => (
+                  <SelectItem hideIndicator key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectPopup>
+            </Select>
+          }
+        />
+
+        <SettingsRow
+          title="Accent hue"
+          description="Shift the app accent color across the spectrum without retinting neutral surfaces."
+          status={`${Math.round(accentHue)}°`}
+          resetAction={
+            accentHue !== DEFAULT_APPEARANCE_ACCENT_HUE ? (
+              <SettingResetButton
+                label="accent hue"
+                onClick={() => setAccentHue(DEFAULT_APPEARANCE_ACCENT_HUE)}
+              />
+            ) : null
+          }
+        >
+          <AppearanceSlider
+            min={APPEARANCE_HUE_MIN}
+            max={APPEARANCE_HUE_MAX}
+            step={1}
+            value={accentHue}
+            onChange={setAccentHue}
+            ariaLabel="Accent hue"
+            fill={`linear-gradient(180deg, oklch(0.68 calc(var(--accent-chroma) * 0.92) var(--accent-hue)) 0%, color-mix(in oklab, oklch(0.62 calc(var(--accent-chroma) * 0.98) var(--accent-hue)) 82%, black) 100%)`}
+          />
+        </SettingsRow>
+
+        <SettingsRow
+          title="Accent intensity"
+          description="Control how strongly the accent influences focus, active, and highlighted surfaces."
+          status={`${Math.round(accentIntensity * 100)}%`}
+          resetAction={
+            accentIntensity !== DEFAULT_APPEARANCE_ACCENT_INTENSITY ? (
+              <SettingResetButton
+                label="accent intensity"
+                onClick={() => setAccentIntensity(DEFAULT_APPEARANCE_ACCENT_INTENSITY)}
+              />
+            ) : null
+          }
+        >
+          <AppearanceSlider
+            min={APPEARANCE_INTENSITY_MIN}
+            max={APPEARANCE_INTENSITY_MAX}
+            step={APPEARANCE_INTENSITY_STEP}
+            value={accentIntensity}
+            onChange={setAccentIntensity}
+            ariaLabel="Accent intensity"
+            fill={`linear-gradient(180deg, color-mix(in oklab, var(--primary) 88%, white) 0%, color-mix(in oklab, var(--primary) 76%, black) 100%)`}
+          />
+        </SettingsRow>
+
+        <SettingsRow
+          title="Preview"
+          description="These swatches use the live semantic tokens that the rest of the app reads."
+        >
+          <AppearancePreview />
+        </SettingsRow>
+      </SettingsSection>
+    </SettingsPageContainer>
+  );
+}
+
 export function ProviderSettingsPanel() {
   const settings = useSettings();
   const { updateSettings } = useUpdateSettings();
@@ -1030,7 +1219,12 @@ export function ProviderSettingsPanel() {
     });
     for (const [id, instance] of instancesByDriver.get(providerSettings.provider) ?? []) {
       if (id === defaultInstanceId) continue;
-      rows.push({ instanceId: id, instance, driver: instance.driver, isDefault: false });
+      rows.push({
+        instanceId: id,
+        instance,
+        driver: instance.driver,
+        isDefault: false,
+      });
     }
   }
   for (const [driver, list] of instancesByDriver) {

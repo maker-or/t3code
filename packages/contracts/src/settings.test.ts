@@ -2,10 +2,39 @@ import { describe, expect, it } from "vitest";
 import { Schema } from "effect";
 
 import { ProviderInstanceId } from "./providerInstance.ts";
-import { DEFAULT_SERVER_SETTINGS, ServerSettings, ServerSettingsPatch } from "./settings.ts";
+import {
+  ClientSettingsSchema,
+  DEFAULT_APPEARANCE_ACCENT_HUE,
+  DEFAULT_APPEARANCE_ACCENT_INTENSITY,
+  DEFAULT_APPEARANCE_MODE,
+  DEFAULT_SERVER_SETTINGS,
+  ServerSettings,
+  ServerSettingsPatch,
+} from "./settings.ts";
 
 const decodeServerSettings = Schema.decodeUnknownSync(ServerSettings);
 const decodeServerSettingsPatch = Schema.decodeUnknownSync(ServerSettingsPatch);
+const decodeClientSettings = Schema.decodeUnknownSync(ClientSettingsSchema);
+
+describe("ClientSettings appearance", () => {
+  it("defaults appearance settings for legacy persisted settings", () => {
+    const decoded = decodeClientSettings({});
+    expect(decoded.appearanceMode).toBe(DEFAULT_APPEARANCE_MODE);
+    expect(decoded.appearanceAccentHue).toBe(DEFAULT_APPEARANCE_ACCENT_HUE);
+    expect(decoded.appearanceAccentIntensity).toBe(DEFAULT_APPEARANCE_ACCENT_INTENSITY);
+  });
+
+  it("decodes persisted appearance settings when present", () => {
+    const decoded = decodeClientSettings({
+      appearanceMode: "dark",
+      appearanceAccentHue: 210,
+      appearanceAccentIntensity: 0.4,
+    });
+    expect(decoded.appearanceMode).toBe("dark");
+    expect(decoded.appearanceAccentHue).toBe(210);
+    expect(decoded.appearanceAccentIntensity).toBe(0.4);
+  });
+});
 
 describe("ServerSettings.providerInstances (slice-2 invariant)", () => {
   it("defaults to an empty record so legacy configs without the key still decode", () => {

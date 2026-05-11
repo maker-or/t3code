@@ -1,23 +1,9 @@
-import { useEffect, useRef, memo } from "react";
+import { useEffect, useMemo, useRef, memo } from "react";
 import { gsap } from "gsap";
-import type { CSSProperties } from "react";
 import type { EnvironmentId } from "@t3tools/contracts";
+import type { CSSProperties } from "react";
 import { playTapSound, snd, Snd } from "../lib/sound";
-
-const ACTIVE_PROJECT_ICON_COLOR_SETS = [
-  { primary: "#506546", secondary: "#132E1E", text: "#6D9C4D" },
-  { primary: "#425860", secondary: "#1C2836", text: "#496F92" },
-  { primary: "#60425F", secondary: "#361C2F", text: "#86468C" },
-  { primary: "#604E42", secondary: "#36291C", text: "#8C6346" },
-  { primary: "#604242", secondary: "#361C1C", text: "#8C4746" },
-  { primary: "#444260", secondary: "#291C36", text: "#5A468C" },
-] as const;
-
-const INACTIVE_PROJECT_ICON_COLORS = {
-  primary: "#222523",
-  secondary: "#000000",
-  text: "#3A3A3A",
-} as const;
+import { useTheme } from "../hooks/useTheme";
 
 function initialsForProject(value: string): string {
   const parts = value
@@ -32,12 +18,34 @@ function initialsForProject(value: string): string {
   return (parts[0] ?? value).slice(0, 2).toUpperCase();
 }
 
-function activeColorSetForProject(value: string): (typeof ACTIVE_PROJECT_ICON_COLOR_SETS)[number] {
-  let hash = 0;
-  for (let index = 0; index < value.length; index++) {
-    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+function projectIconColorSetFromTheme(active: boolean): {
+  primary: string;
+  secondary: string;
+  text: string;
+  opacity: string;
+} {
+  if (typeof document === "undefined") {
+    return {
+      primary: active ? "rgb(28, 33, 41)" : "rgb(34, 37, 35)",
+      secondary: active ? "rgb(78, 85, 94)" : "rgb(0, 0, 0)",
+      text: active ? "rgb(255, 255, 255)" : "rgb(58, 58, 58)",
+      opacity: active ? "1" : "0.48",
+    };
   }
-  return ACTIVE_PROJECT_ICON_COLOR_SETS[hash % ACTIVE_PROJECT_ICON_COLOR_SETS.length]!;
+
+  const styles = getComputedStyle(document.documentElement);
+  const primary = styles.getPropertyValue(active ? "--foreground" : "--surface-elevated").trim();
+  const secondary = styles
+    .getPropertyValue(active ? "--surface-strong" : "--surface-canvas")
+    .trim();
+  const text = styles.getPropertyValue(active ? "--background" : "--muted-foreground").trim();
+
+  return {
+    primary: primary || (active ? "rgb(28, 33, 41)" : "rgb(34, 37, 35)"),
+    secondary: secondary || (active ? "rgb(78, 85, 94)" : "rgb(0, 0, 0)"),
+    text: text || (active ? "rgb(255, 255, 255)" : "rgb(58, 58, 58)"),
+    opacity: active ? "1" : "0.48",
+  };
 }
 
 export const ProjectFavicon = memo(function ProjectFavicon(input: {
@@ -47,9 +55,13 @@ export const ProjectFavicon = memo(function ProjectFavicon(input: {
   active?: boolean;
   className?: string;
 }) {
+  const { theme, accentHue, accentIntensity } = useTheme();
   const label =
     input.projectName?.trim() || input.cwd.split(/[\\/]/).filter(Boolean).at(-1) || "PR";
-  const colors = input.active ? activeColorSetForProject(label) : INACTIVE_PROJECT_ICON_COLORS;
+  const colors = useMemo(
+    () => projectIconColorSetFromTheme(Boolean(input.active)),
+    [accentHue, accentIntensity, input.active, theme],
+  );
 
   const spanRef = useRef<HTMLSpanElement>(null);
   const prevActiveRef = useRef(input.active);
@@ -60,27 +72,39 @@ export const ProjectFavicon = memo(function ProjectFavicon(input: {
 
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) {
+      gsap.killTweensOf(span);
       span.style.setProperty("--project-icon-primary", colors.primary);
       span.style.setProperty("--project-icon-secondary", colors.secondary);
       span.style.setProperty("--project-icon-text", colors.text);
+      span.style.setProperty("--project-icon-opacity", colors.opacity);
+      prevActiveRef.current = input.active;
       return;
     }
 
-    // Only animate if active state changed
+    gsap.killTweensOf(span);
+
     if (prevActiveRef.current !== input.active) {
-      gsap.to(span, {
-        "--project-icon-primary": colors.primary,
-        "--project-icon-secondary": colors.secondary,
-        "--project-icon-text": colors.text,
-        duration: 0.25,
-        ease: "power3.out",
-      });
+      if (input.active) {
+        gsap.to(span, {
+          "--project-icon-primary": colors.primary,
+          "--project-icon-secondary": colors.secondary,
+          "--project-icon-text": colors.text,
+          "--project-icon-opacity": colors.opacity,
+          duration: 0.25,
+          ease: "power3.out",
+        });
+      } else {
+        span.style.setProperty("--project-icon-primary", colors.primary);
+        span.style.setProperty("--project-icon-secondary", colors.secondary);
+        span.style.setProperty("--project-icon-text", colors.text);
+        span.style.setProperty("--project-icon-opacity", colors.opacity);
+      }
       prevActiveRef.current = input.active;
     } else {
-      // Initial render - set values directly
       span.style.setProperty("--project-icon-primary", colors.primary);
       span.style.setProperty("--project-icon-secondary", colors.secondary);
       span.style.setProperty("--project-icon-text", colors.text);
+      span.style.setProperty("--project-icon-opacity", colors.opacity);
     }
   }, [input.active, colors]);
 
@@ -93,7 +117,15 @@ export const ProjectFavicon = memo(function ProjectFavicon(input: {
         snd.stop(Snd.SOUNDS.TAP);
         snd.play(Snd.SOUNDS.BUTTON, { volume: 0.2 });
       }}
-      className={`cursor-pointer inline-flex shrink-0 items-center justify-center rounded-[4px] bg-[linear-gradient(180deg,var(--project-icon-primary)_0%,var(--project-icon-secondary)_100%)] leading-none text-[var(--project-icon-text)] tracking-[-0.04em] ${input.className ?? ""}`}
+      style={
+        {
+          "--project-icon-primary": colors.primary,
+          "--project-icon-secondary": colors.secondary,
+          "--project-icon-text": colors.text,
+          "--project-icon-opacity": colors.opacity,
+        } as CSSProperties
+      }
+      className={`cursor-pointer inline-flex shrink-0 items-center justify-center rounded-[4px] bg-[linear-gradient(180deg,var(--project-icon-primary)_0%,var(--project-icon-secondary)_100%)] leading-none text-[var(--project-icon-text)] tracking-[-0.04em] opacity-[var(--project-icon-opacity)] transition-opacity duration-200 ${input.className ?? ""}`}
     >
       {initialsForProject(label)}
     </span>

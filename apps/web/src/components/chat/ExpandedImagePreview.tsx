@@ -30,6 +30,6 @@ export function buildExpandedImagePreview(
       name: image.name,
     })),
     index: selectedIndex,
-    originRect,
+    ...(originRect ? { originRect } : {}),
   };
 }

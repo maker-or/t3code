@@ -102,6 +102,10 @@ function normalizeComputedColor(value: string | null | undefined, fallback: stri
   return value ?? fallback;
 }
 
+function cssVariableColor(styles: CSSStyleDeclaration, name: string, fallback: string): string {
+  return normalizeComputedColor(styles.getPropertyValue(name), fallback);
+}
+
 function terminalThemeFromApp(mountElement?: HTMLElement | null): ITheme {
   const isDark = document.documentElement.classList.contains("dark");
   const fallbackBackground = isDark ? "rgb(14, 18, 24)" : "rgb(255, 255, 255)";
@@ -120,21 +124,46 @@ function terminalThemeFromApp(mountElement?: HTMLElement | null): ITheme {
     drawerStyles.color,
     normalizeComputedColor(bodyStyles.color, fallbackForeground),
   );
+  const ring = cssVariableColor(
+    bodyStyles,
+    "--ring",
+    isDark ? "rgb(180, 203, 255)" : "rgb(38, 56, 78)",
+  );
+  const success = cssVariableColor(
+    bodyStyles,
+    "--success",
+    isDark ? "rgb(134, 231, 149)" : "rgb(60, 126, 86)",
+  );
+  const warning = cssVariableColor(
+    bodyStyles,
+    "--warning",
+    isDark ? "rgb(244, 205, 114)" : "rgb(146, 112, 35)",
+  );
+  const destructive = cssVariableColor(
+    bodyStyles,
+    "--destructive",
+    isDark ? "rgb(255, 122, 142)" : "rgb(191, 70, 87)",
+  );
+  const info = cssVariableColor(
+    bodyStyles,
+    "--info",
+    isDark ? "rgb(137, 190, 255)" : "rgb(72, 102, 163)",
+  );
 
   if (isDark) {
     return {
       background,
       foreground,
-      cursor: "rgb(180, 203, 255)",
-      selectionBackground: "rgba(180, 203, 255, 0.25)",
+      cursor: ring,
+      selectionBackground: "color-mix(in srgb, var(--ring) 26%, transparent)",
       scrollbarSliderBackground: "rgba(255, 255, 255, 0.1)",
       scrollbarSliderHoverBackground: "rgba(255, 255, 255, 0.18)",
       scrollbarSliderActiveBackground: "rgba(255, 255, 255, 0.22)",
       black: "rgb(24, 30, 38)",
-      red: "rgb(255, 122, 142)",
-      green: "rgb(134, 231, 149)",
-      yellow: "rgb(244, 205, 114)",
-      blue: "rgb(137, 190, 255)",
+      red: destructive,
+      green: success,
+      yellow: warning,
+      blue: info,
       magenta: "rgb(208, 176, 255)",
       cyan: "rgb(124, 232, 237)",
       white: "rgb(210, 218, 230)",
@@ -152,16 +181,16 @@ function terminalThemeFromApp(mountElement?: HTMLElement | null): ITheme {
   return {
     background,
     foreground,
-    cursor: "rgb(38, 56, 78)",
-    selectionBackground: "rgba(37, 63, 99, 0.2)",
+    cursor: ring,
+    selectionBackground: "color-mix(in srgb, var(--ring) 18%, transparent)",
     scrollbarSliderBackground: "rgba(0, 0, 0, 0.15)",
     scrollbarSliderHoverBackground: "rgba(0, 0, 0, 0.25)",
     scrollbarSliderActiveBackground: "rgba(0, 0, 0, 0.3)",
     black: "rgb(44, 53, 66)",
-    red: "rgb(191, 70, 87)",
-    green: "rgb(60, 126, 86)",
-    yellow: "rgb(146, 112, 35)",
-    blue: "rgb(72, 102, 163)",
+    red: destructive,
+    green: success,
+    yellow: warning,
+    blue: info,
     magenta: "rgb(132, 86, 149)",
     cyan: "rgb(53, 127, 141)",
     white: "rgb(210, 215, 223)",
@@ -835,7 +864,7 @@ export function TerminalViewport({
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full overflow-hidden rounded-[4px] bg-background"
+      className="relative h-full w-full overflow-hidden rounded-[4px] bg-[var(--surface-subtle)]"
     />
   );
 }
@@ -1155,7 +1184,7 @@ export default function ThreadTerminalDrawer({
 
   return (
     <aside
-      className={`thread-terminal-drawer relative flex min-h-0 min-w-0 w-full flex-col overflow-hidden bg-background ${
+      className={`thread-terminal-drawer relative flex min-h-0 min-w-0 w-full flex-col overflow-hidden bg-[var(--surface-subtle)] ${
         layout === "panel"
           ? "min-h-0 flex-1 self-stretch rounded-xl border-l border-border/80"
           : "border-t border-border/80"
@@ -1174,7 +1203,7 @@ export default function ThreadTerminalDrawer({
 
       {!hasTerminalSidebar && (
         <div className="pointer-events-none absolute right-2 top-2 z-20">
-          <div className="pointer-events-auto inline-flex items-center overflow-hidden rounded-md border border-border/80 bg-background/70">
+          <div className="pointer-events-auto inline-flex items-center overflow-hidden rounded-md border border-border/80 bg-[color-mix(in_oklab,var(--surface-subtle)_82%,transparent)]">
             <TerminalActionButton
               className={`p-1 text-foreground/90 transition-colors ${
                 hasReachedSplitLimit

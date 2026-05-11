@@ -11,6 +11,7 @@ import { getLocalStorageItem, setLocalStorageItem } from "./hooks/useLocalStorag
 
 export const CLIENT_SETTINGS_STORAGE_KEY = "t3code:client-settings:v1";
 export const SAVED_ENVIRONMENT_REGISTRY_STORAGE_KEY = "t3code:saved-environment-registry:v1";
+export const LEGACY_THEME_STORAGE_KEY = "t3code:theme";
 
 const BrowserSavedEnvironmentRecordSchema = Schema.Struct({
   environmentId: EnvironmentId,
@@ -74,6 +75,15 @@ export function writeBrowserClientSettings(settings: ClientSettings): void {
   }
 
   setLocalStorageItem(CLIENT_SETTINGS_STORAGE_KEY, settings, ClientSettingsSchema);
+}
+
+export function readLegacyBrowserThemePreference(): "light" | "dark" | "system" | null {
+  if (!hasWindow()) {
+    return null;
+  }
+
+  const raw = window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
+  return raw === "light" || raw === "dark" || raw === "system" ? raw : null;
 }
 
 function readBrowserSavedEnvironmentRegistryDocument(): BrowserSavedEnvironmentRegistryDocument {

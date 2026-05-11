@@ -2730,7 +2730,7 @@ const CompactSidebarProjectRail = memo(function CompactSidebarProjectRail(props:
 
   return (
     <TooltipProvider delay={100}>
-      <div className="flex h-full min-h-0 w-16 flex-col items-center bg-[#000000]">
+      <div className="flex h-full min-h-0 w-16 flex-col items-center bg-[var(--surface-canvas)]">
         <SidebarHeader className="drag-region flex h-[52px] w-full items-center justify-center p-0">
           <Tooltip>
             <TooltipTrigger

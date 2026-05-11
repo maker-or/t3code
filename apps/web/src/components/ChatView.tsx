@@ -3653,7 +3653,7 @@ export default function ChatView(props: ChatViewProps) {
       {/* Top bar */}
       <header
         className={cn(
-          " bg-[#000000] ",
+          " bg-[var(--surface-canvas)] ",
           isElectron
             ? cn(
                 "drag-region flex h-[52px] items-center px-3 sm:px-5 wco:h-[env(titlebar-area-height)]",
@@ -3700,9 +3700,9 @@ export default function ChatView(props: ChatViewProps) {
         onDismiss={() => setThreadError(activeThread.id, null)}
       />
       {/* Main content area with optional plan sidebar */}
-      <div className="flex min-h-0 min-w-0 flex-1 items-stretch gap-2 bg-[#000000] p-2">
+      <div className="flex min-h-0 min-w-0 flex-1 items-stretch gap-2 bg-[var(--surface-canvas)] p-2">
         {/* Chat column */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl bg-[#0D0D0D]">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl bg-[var(--surface-subtle)]">
           {/* Messages Wrapper */}
           <div className="relative flex min-h-0 flex-1 flex-col">
             {/* Messages — LegendList handles virtualization and scrolling internally */}

@@ -28,7 +28,33 @@ export const SidebarProjectGroupingMode = Schema.Literals([
 export type SidebarProjectGroupingMode = typeof SidebarProjectGroupingMode.Type;
 export const DEFAULT_SIDEBAR_PROJECT_GROUPING_MODE: SidebarProjectGroupingMode = "repository";
 
+export const AppearanceMode = Schema.Literals(["system", "light", "dark"]);
+export type AppearanceMode = typeof AppearanceMode.Type;
+export const DEFAULT_APPEARANCE_MODE: AppearanceMode = "system";
+
+export const DEFAULT_APPEARANCE_ACCENT_HUE = 264;
+export const DEFAULT_APPEARANCE_ACCENT_INTENSITY = 0.58;
+
+const AppearanceAccentHue = Schema.Number.check(
+  Schema.isGreaterThanOrEqualTo(0),
+  Schema.isLessThanOrEqualTo(360),
+);
+
+const AppearanceAccentIntensity = Schema.Number.check(
+  Schema.isGreaterThanOrEqualTo(0),
+  Schema.isLessThanOrEqualTo(1),
+);
+
 export const ClientSettingsSchema = Schema.Struct({
+  appearanceAccentHue: AppearanceAccentHue.pipe(
+    Schema.withDecodingDefault(Effect.succeed(DEFAULT_APPEARANCE_ACCENT_HUE)),
+  ),
+  appearanceAccentIntensity: AppearanceAccentIntensity.pipe(
+    Schema.withDecodingDefault(Effect.succeed(DEFAULT_APPEARANCE_ACCENT_INTENSITY)),
+  ),
+  appearanceMode: AppearanceMode.pipe(
+    Schema.withDecodingDefault(Effect.succeed(DEFAULT_APPEARANCE_MODE)),
+  ),
   autoOpenPlanSidebar: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   confirmThreadArchive: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   confirmThreadDelete: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),

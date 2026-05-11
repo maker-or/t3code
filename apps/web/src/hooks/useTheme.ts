@@ -1,15 +1,22 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
+import {
+  DEFAULT_APPEARANCE_ACCENT_HUE,
+  DEFAULT_APPEARANCE_ACCENT_INTENSITY,
+  DEFAULT_APPEARANCE_MODE,
+  type AppearanceMode,
+} from "@t3tools/contracts/settings";
+import {
+  readBrowserClientSettings,
+  readLegacyBrowserThemePreference,
+} from "../clientPersistenceStorage";
+import { useSettings, useUpdateSettings } from "./useSettings";
 
-type Theme = "light" | "dark" | "system";
 type ThemeSnapshot = {
-  theme: Theme;
   systemDark: boolean;
 };
 
-const STORAGE_KEY = "t3code:theme";
 const MEDIA_QUERY = "(prefers-color-scheme: dark)";
 const DEFAULT_THEME_SNAPSHOT: ThemeSnapshot = {
-  theme: "system",
   systemDark: false,
 };
 const THEME_COLOR_META_NAME = "theme-color";
@@ -17,25 +24,31 @@ const DYNAMIC_THEME_COLOR_SELECTOR = `meta[name="${THEME_COLOR_META_NAME}"][data
 
 let listeners: Array<() => void> = [];
 let lastSnapshot: ThemeSnapshot | null = null;
-let lastDesktopTheme: Theme | null = null;
+let lastDesktopTheme: AppearanceMode | null = null;
 
 function emitChange() {
   for (const listener of listeners) listener();
-}
-
-function hasThemeStorage() {
-  return typeof window !== "undefined" && typeof localStorage !== "undefined";
 }
 
 function getSystemDark() {
   return typeof window !== "undefined" && window.matchMedia(MEDIA_QUERY).matches;
 }
 
-function getStored(): Theme {
-  if (!hasThemeStorage()) return DEFAULT_THEME_SNAPSHOT.theme;
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw === "light" || raw === "dark" || raw === "system") return raw;
-  return DEFAULT_THEME_SNAPSHOT.theme;
+function clampHue(value: number): number {
+  if (!Number.isFinite(value)) {
+    return DEFAULT_APPEARANCE_ACCENT_HUE;
+  }
+
+  const normalizedValue = value % 360;
+  return normalizedValue < 0 ? normalizedValue + 360 : normalizedValue;
+}
+
+function clampIntensity(value: number): number {
+  if (!Number.isFinite(value)) {
+    return DEFAULT_APPEARANCE_ACCENT_INTENSITY;
+  }
+
+  return Math.min(1, Math.max(0, value));
 }
 
 function ensureThemeColorMetaTag(): HTMLMetaElement {
@@ -87,26 +100,7 @@ export function syncBrowserChromeTheme() {
   ensureThemeColorMetaTag().setAttribute("content", backgroundColor);
 }
 
-function applyTheme(theme: Theme, suppressTransitions = false) {
-  if (typeof document === "undefined" || typeof window === "undefined") return;
-  if (suppressTransitions) {
-    document.documentElement.classList.add("no-transitions");
-  }
-  const isDark = theme === "dark" || (theme === "system" && getSystemDark());
-  document.documentElement.classList.toggle("dark", isDark);
-  syncBrowserChromeTheme();
-  syncDesktopTheme(theme);
-  if (suppressTransitions) {
-    // Force a reflow so the no-transitions class takes effect before removal
-    // oxlint-disable-next-line no-unused-expressions
-    document.documentElement.offsetHeight;
-    requestAnimationFrame(() => {
-      document.documentElement.classList.remove("no-transitions");
-    });
-  }
-}
-
-function syncDesktopTheme(theme: Theme) {
+function syncDesktopTheme(theme: AppearanceMode) {
   if (typeof window === "undefined") return;
   const bridge = window.desktopBridge;
   if (!bridge || lastDesktopTheme === theme) {
@@ -121,21 +115,64 @@ function syncDesktopTheme(theme: Theme) {
   });
 }
 
-// Apply immediately on module load to prevent flash
-if (typeof document !== "undefined" && hasThemeStorage()) {
-  applyTheme(getStored());
+export function applyTheme(
+  theme: AppearanceMode,
+  accentHue: number,
+  accentIntensity: number,
+  suppressTransitions = false,
+) {
+  if (typeof document === "undefined" || typeof window === "undefined") return;
+  if (suppressTransitions) {
+    document.documentElement.classList.add("no-transitions");
+  }
+  const isDark = theme === "dark" || (theme === "system" && getSystemDark());
+  document.documentElement.classList.toggle("dark", isDark);
+  document.documentElement.dataset.appearanceMode = theme;
+  document.documentElement.style.setProperty("--accent-hue", `${clampHue(accentHue)}`);
+  document.documentElement.style.setProperty(
+    "--accent-intensity",
+    clampIntensity(accentIntensity).toFixed(3),
+  );
+  syncBrowserChromeTheme();
+  syncDesktopTheme(theme);
+  if (suppressTransitions) {
+    document.documentElement.offsetHeight;
+    requestAnimationFrame(() => {
+      document.documentElement.classList.remove("no-transitions");
+    });
+  }
+}
+
+function readInitialAppearance() {
+  const persistedSettings = readBrowserClientSettings();
+  const legacyThemePreference = readLegacyBrowserThemePreference();
+  return {
+    appearanceMode:
+      persistedSettings?.appearanceMode ?? legacyThemePreference ?? DEFAULT_APPEARANCE_MODE,
+    appearanceAccentHue: persistedSettings?.appearanceAccentHue ?? DEFAULT_APPEARANCE_ACCENT_HUE,
+    appearanceAccentIntensity:
+      persistedSettings?.appearanceAccentIntensity ?? DEFAULT_APPEARANCE_ACCENT_INTENSITY,
+  };
+}
+
+const initialAppearance = readInitialAppearance();
+
+if (typeof document !== "undefined") {
+  applyTheme(
+    initialAppearance.appearanceMode,
+    initialAppearance.appearanceAccentHue,
+    initialAppearance.appearanceAccentIntensity,
+  );
 }
 
 function getSnapshot(): ThemeSnapshot {
-  if (!hasThemeStorage()) return DEFAULT_THEME_SNAPSHOT;
-  const theme = getStored();
-  const systemDark = theme === "system" ? getSystemDark() : false;
+  const systemDark = getSystemDark();
 
-  if (lastSnapshot && lastSnapshot.theme === theme && lastSnapshot.systemDark === systemDark) {
+  if (lastSnapshot && lastSnapshot.systemDark === systemDark) {
     return lastSnapshot;
   }
 
-  lastSnapshot = { theme, systemDark };
+  lastSnapshot = { systemDark };
   return lastSnapshot;
 }
 
@@ -147,48 +184,66 @@ function subscribe(listener: () => void): () => void {
   if (typeof window === "undefined") return () => {};
   listeners.push(listener);
 
-  // Listen for system preference changes
   const mq = window.matchMedia(MEDIA_QUERY);
   const handleChange = () => {
-    if (getStored() === "system") applyTheme("system", true);
     emitChange();
   };
   mq.addEventListener("change", handleChange);
 
-  // Listen for storage changes from other tabs
-  const handleStorage = (e: StorageEvent) => {
-    if (e.key === STORAGE_KEY) {
-      applyTheme(getStored(), true);
-      emitChange();
-    }
-  };
-  window.addEventListener("storage", handleStorage);
-
   return () => {
     listeners = listeners.filter((l) => l !== listener);
     mq.removeEventListener("change", handleChange);
-    window.removeEventListener("storage", handleStorage);
   };
 }
 
 export function useTheme() {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const theme = snapshot.theme;
+  const { updateSettings } = useUpdateSettings();
+  const theme = useSettings((settings) => settings.appearanceMode);
+  const accentHue = useSettings((settings) => settings.appearanceAccentHue);
+  const accentIntensity = useSettings((settings) => settings.appearanceAccentIntensity);
 
   const resolvedTheme: "light" | "dark" =
     theme === "system" ? (snapshot.systemDark ? "dark" : "light") : theme;
 
-  const setTheme = useCallback((next: Theme) => {
-    if (!hasThemeStorage()) return;
-    localStorage.setItem(STORAGE_KEY, next);
-    applyTheme(next, true);
-    emitChange();
-  }, []);
+  const setTheme = useCallback(
+    (next: AppearanceMode) => {
+      updateSettings({ appearanceMode: next });
+      applyTheme(next, accentHue, accentIntensity, true);
+      emitChange();
+    },
+    [accentHue, accentIntensity, updateSettings],
+  );
 
-  // Keep DOM in sync on mount/change
+  const setAccentHue = useCallback(
+    (next: number) => {
+      const clampedValue = clampHue(next);
+      updateSettings({ appearanceAccentHue: clampedValue });
+      applyTheme(theme, clampedValue, accentIntensity, true);
+    },
+    [accentIntensity, theme, updateSettings],
+  );
+
+  const setAccentIntensity = useCallback(
+    (next: number) => {
+      const clampedValue = clampIntensity(next);
+      updateSettings({ appearanceAccentIntensity: clampedValue });
+      applyTheme(theme, accentHue, clampedValue, true);
+    },
+    [accentHue, theme, updateSettings],
+  );
+
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+    applyTheme(theme, accentHue, accentIntensity);
+  }, [accentHue, accentIntensity, theme]);
 
-  return { theme, setTheme, resolvedTheme } as const;
+  return {
+    theme,
+    setTheme,
+    resolvedTheme,
+    accentHue,
+    setAccentHue,
+    accentIntensity,
+    setAccentIntensity,
+  } as const;
 }

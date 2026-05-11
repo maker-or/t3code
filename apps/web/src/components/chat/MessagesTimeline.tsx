@@ -396,48 +396,51 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
 
   return (
     <div className="flex justify-start">
-      <div className="group relative w-full px-1 py-1">
-        <div className="opacity-60">
-          {userImages.length > 0 && (
-            <div className="mb-2 grid max-w-[420px] grid-cols-2 gap-2">
-              {userImages.map((image: NonNullable<TimelineMessage["attachments"]>[number]) => (
-                <div
-                  key={image.id}
-                  className="overflow-hidden rounded-lg border border-border/80 bg-background/70"
-                >
-                  {image.previewUrl ? (
-                    <button
-                      type="button"
-                      className="h-full w-full cursor-zoom-in"
-                      aria-label={`Preview ${image.name}`}
-                      onClick={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const preview = buildExpandedImagePreview(userImages, image.id, rect);
-                        if (!preview) return;
-                        ctx.onImageExpand(preview);
-                      }}
-                    >
-                      <img
-                        src={image.previewUrl}
-                        alt={image.name}
-                        className="block h-auto max-h-[220px] w-full object-cover"
-                      />
-                    </button>
-                  ) : (
-                    <div className="flex min-h-[72px] items-center justify-center px-2 py-3 text-center text-[11px] text-muted-foreground/70">
-                      {image.name}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          {(displayedUserMessage.visibleText.trim().length > 0 || terminalContexts.length > 0) && (
-            <UserMessageBody
-              text={displayedUserMessage.visibleText}
-              terminalContexts={terminalContexts}
-            />
-          )}
+      <div className="group relative max-w-[min(42rem,calc(100%-0.5rem))] px-1 py-1">
+        <div className="inline-block max-w-full rounded-xl border-2 border-border/80 bg-[var(--surface-elevated)] px-3 py-3 align-top">
+          <div className="opacity-60">
+            {userImages.length > 0 && (
+              <div className="mb-2 grid max-w-[420px] grid-cols-2 gap-2">
+                {userImages.map((image: NonNullable<TimelineMessage["attachments"]>[number]) => (
+                  <div
+                    key={image.id}
+                    className="overflow-hidden rounded-lg border border-border/80 bg-background/70"
+                  >
+                    {image.previewUrl ? (
+                      <button
+                        type="button"
+                        className="h-full w-full cursor-zoom-in"
+                        aria-label={`Preview ${image.name}`}
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const preview = buildExpandedImagePreview(userImages, image.id, rect);
+                          if (!preview) return;
+                          ctx.onImageExpand(preview);
+                        }}
+                      >
+                        <img
+                          src={image.previewUrl}
+                          alt={image.name}
+                          className="block h-auto max-h-[220px] w-full object-cover"
+                        />
+                      </button>
+                    ) : (
+                      <div className="flex min-h-[72px] items-center justify-center px-2 py-3 text-center text-[11px] text-muted-foreground/70">
+                        {image.name}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {(displayedUserMessage.visibleText.trim().length > 0 ||
+              terminalContexts.length > 0) && (
+              <UserMessageBody
+                text={displayedUserMessage.visibleText}
+                terminalContexts={terminalContexts}
+              />
+            )}
+          </div>
         </div>
         <div className="mt-1.5 flex items-center justify-end gap-2">
           <div className="flex items-center gap-1.5 opacity-0 transition-opacity duration-200 focus-within:opacity-100 group-hover:opacity-100">

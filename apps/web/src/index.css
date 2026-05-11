@@ -220,25 +220,37 @@
   --icon-swap-blur: 2px;
   --icon-swap-start-scale: 0.25;
   --icon-swap-ease: ease-in-out;
-  --background: var(--color-white);
+  --accent-hue: 264;
+  --accent-intensity: 0.58;
+  --accent-chroma: calc(0.08 + (var(--accent-intensity) * 0.19));
+  --accent-chroma-soft: calc(0.02 + (var(--accent-intensity) * 0.06));
+  --background: oklch(0.99 0.004 var(--accent-hue));
   --app-chrome-background: var(--background);
-  --foreground: var(--color-neutral-800);
-  --card: var(--color-white);
-  --card-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --primary: oklch(0.488 0.217 264);
+  --foreground: oklch(0.26 0.02 var(--accent-hue));
+  --card: color-mix(in oklab, var(--background) 90%, white 10%);
+  --card-foreground: var(--foreground);
+  --popover: color-mix(in oklab, var(--background) 94%, white 6%);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.56 var(--accent-chroma) var(--accent-hue));
   --primary-foreground: var(--color-white);
-  --secondary: --alpha(var(--color-black) / 4%);
-  --secondary-foreground: var(--color-neutral-800);
-  --muted: --alpha(var(--color-black) / 4%);
-  --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 90%, var(--color-black));
-  --accent: --alpha(var(--color-black) / 4%);
-  --accent-foreground: var(--color-neutral-800);
+  --secondary: color-mix(
+    in oklab,
+    var(--background) 92%,
+    oklch(0.72 var(--accent-chroma-soft) var(--accent-hue))
+  );
+  --secondary-foreground: var(--foreground);
+  --muted: color-mix(in oklab, var(--background) 94%, black 6%);
+  --muted-foreground: color-mix(in oklab, var(--foreground) 68%, var(--background));
+  --accent: color-mix(
+    in oklab,
+    var(--background) 83%,
+    oklch(0.74 var(--accent-chroma-soft) var(--accent-hue))
+  );
+  --accent-foreground: var(--foreground);
   --destructive: var(--color-red-500);
-  --border: --alpha(var(--color-black) / 8%);
-  --input: --alpha(var(--color-black) / 10%);
-  --ring: oklch(0.488 0.217 264);
+  --border: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --input: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --ring: oklch(0.62 calc(var(--accent-chroma) * 0.92) var(--accent-hue));
   --destructive-foreground: var(--color-red-700);
   --info: var(--color-blue-500);
   --info-foreground: var(--color-blue-700);
@@ -246,28 +258,40 @@
   --success-foreground: var(--color-emerald-700);
   --warning: var(--color-amber-500);
   --warning-foreground: var(--color-amber-700);
+  --surface-canvas: color-mix(in oklab, var(--background) 94%, black 6%);
+  --surface-subtle: color-mix(in oklab, var(--background) 90%, black 10%);
+  --surface-elevated: color-mix(in oklab, var(--background) 86%, black 14%);
+  --surface-strong: color-mix(in oklab, var(--background) 82%, black 18%);
 
   @variant dark {
     color-scheme: dark;
-    --background: color-mix(in srgb, var(--color-neutral-950) 95%, var(--color-white));
+    --background: oklch(0.14 0.012 var(--accent-hue));
     --app-chrome-background: var(--background);
-    --foreground: var(--color-neutral-100);
-    --card: color-mix(in srgb, var(--background) 98%, var(--color-white));
-    --card-foreground: var(--color-neutral-100);
-    --popover: color-mix(in srgb, var(--background) 98%, var(--color-white));
-    --popover-foreground: var(--color-neutral-100);
-    --primary: oklch(0.588 0.217 264);
+    --foreground: oklch(0.94 0.008 var(--accent-hue));
+    --card: color-mix(in oklab, var(--background) 84%, white 16%);
+    --card-foreground: var(--foreground);
+    --popover: color-mix(in oklab, var(--background) 88%, white 12%);
+    --popover-foreground: var(--foreground);
+    --primary: oklch(0.72 calc(var(--accent-chroma) * 0.88) var(--accent-hue));
     --primary-foreground: var(--color-white);
-    --secondary: --alpha(var(--color-white) / 4%);
-    --secondary-foreground: var(--color-neutral-100);
-    --muted: --alpha(var(--color-white) / 4%);
-    --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 90%, var(--color-white));
-    --accent: --alpha(var(--color-white) / 4%);
-    --accent-foreground: var(--color-neutral-100);
+    --secondary: color-mix(
+      in oklab,
+      var(--background) 86%,
+      oklch(0.5 var(--accent-chroma-soft) var(--accent-hue))
+    );
+    --secondary-foreground: var(--foreground);
+    --muted: color-mix(in oklab, var(--background) 90%, white 10%);
+    --muted-foreground: color-mix(in oklab, var(--foreground) 68%, var(--background));
+    --accent: color-mix(
+      in oklab,
+      var(--background) 80%,
+      oklch(0.58 var(--accent-chroma-soft) var(--accent-hue))
+    );
+    --accent-foreground: var(--foreground);
     --destructive: color-mix(in srgb, var(--color-red-500) 90%, var(--color-white));
-    --border: --alpha(var(--color-white) / 6%);
-    --input: --alpha(var(--color-white) / 8%);
-    --ring: oklch(0.588 0.217 264);
+    --border: color-mix(in oklab, var(--foreground) 10%, transparent);
+    --input: color-mix(in oklab, var(--foreground) 13%, transparent);
+    --ring: oklch(0.76 calc(var(--accent-chroma) * 0.82) var(--accent-hue));
     --destructive-foreground: var(--color-red-400);
     --info: var(--color-blue-500);
     --info-foreground: var(--color-blue-400);
@@ -275,6 +299,10 @@
     --success-foreground: var(--color-emerald-400);
     --warning: var(--color-amber-500);
     --warning-foreground: var(--color-amber-400);
+    --surface-canvas: color-mix(in oklab, var(--background) 96%, black 4%);
+    --surface-subtle: color-mix(in oklab, var(--background) 92%, white 8%);
+    --surface-elevated: color-mix(in oklab, var(--background) 88%, white 12%);
+    --surface-strong: color-mix(in oklab, var(--background) 82%, white 18%);
   }
 }
 
