@@ -1,6 +1,6 @@
 {
   "name": "@t3tools/web",
-  "version": "0.0.22",
+  "version": "0.0.26",
   "private": true,
   "type": "module",
   "scripts": {
@@ -42,7 +42,6 @@
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "snd-lib": "^1.2.4",
     "tailwind-merge": "^3.4.0",
     "zustand": "^5.0.11"
   },
@@ -57,6 +56,7 @@
     "@vitejs/plugin-react": "^6.0.0",
     "@vitest/browser-playwright": "^4.0.18",
     "babel-plugin-react-compiler": "^19.0.0-beta-e552027-20250112",
+    "jsdom": "^26.1.0",
     "msw": "2.12.11",
     "playwright": "^1.58.2",
     "tailwindcss": "^4.0.0",

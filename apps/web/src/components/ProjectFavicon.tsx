@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, memo } from "react";
 import { gsap } from "gsap";
 import type { EnvironmentId } from "@t3tools/contracts";
 import type { CSSProperties } from "react";
-import { playTapSound, snd, Snd } from "../lib/sound";
 import { useTheme } from "../hooks/useTheme";
 
 function initialsForProject(value: string): string {
@@ -112,11 +111,6 @@ export const ProjectFavicon = memo(function ProjectFavicon(input: {
     <span
       ref={spanRef}
       aria-hidden="true"
-      onMouseEnter={playTapSound}
-      onClick={() => {
-        snd.stop(Snd.SOUNDS.TAP);
-        snd.play(Snd.SOUNDS.BUTTON, { volume: 0.2 });
-      }}
       style={
         {
           "--project-icon-primary": colors.primary,
