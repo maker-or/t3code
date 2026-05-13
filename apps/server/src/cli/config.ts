@@ -135,6 +135,10 @@ const EnvServerConfig = Config.all({
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
+  desktopBootstrapToken: Config.string("T3CODE_DESKTOP_BOOTSTRAP_TOKEN").pipe(
+    Config.option,
+    Config.map(Option.getOrUndefined),
+  ),
   bootstrapFd: Config.int("T3CODE_BOOTSTRAP_FD").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
@@ -320,7 +324,7 @@ export const resolveServerConfig = (
       ),
       () => mode === "desktop",
     );
-    const desktopBootstrapToken = bootstrap?.desktopBootstrapToken;
+    const desktopBootstrapToken = env.desktopBootstrapToken ?? bootstrap?.desktopBootstrapToken;
     const autoBootstrapProjectFromCwd = Option.getOrElse(
       resolveOptionPrecedence(
         Option.fromUndefinedOr(options?.forceAutoBootstrapProjectFromCwd),

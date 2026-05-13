@@ -186,7 +186,9 @@ async function waitForAuthenticatedSessionAfterBootstrap(): Promise<AuthSessionS
 }
 
 const TRANSIENT_BOOTSTRAP_STATUS_CODES = new Set([502, 503, 504]);
-const BOOTSTRAP_RETRY_TIMEOUT_MS = 15_000;
+// Bootstrap can be gated behind backend startup in dev, so keep retrying long enough
+// for the backend to come up instead of surfacing a transient 502 as a hard failure.
+const BOOTSTRAP_RETRY_TIMEOUT_MS = 60_000;
 const BOOTSTRAP_RETRY_STEP_MS = 500;
 
 export async function retryTransientBootstrap<T>(operation: () => Promise<T>): Promise<T> {

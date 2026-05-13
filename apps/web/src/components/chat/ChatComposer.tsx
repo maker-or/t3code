@@ -1846,12 +1846,12 @@ export const ChatComposer = memo(
           data-chat-composer-footer="true"
           data-chat-composer-footer-compact={isComposerFooterCompact ? "true" : "false"}
           className={cn(
-            "fixed bottom-[calc(5dvh-18px)] left-[calc(var(--sidebar-width)+0.75rem)] z-40 flex h-10 min-w-0 max-w-[calc(100vw-var(--sidebar-width)-8rem)] flex-col items-center justify-center gap-2 overflow-visible",
+            "fixed bottom-[calc(5dvh-18px)] left-[calc(var(--sidebar-width)+0.75rem)] z-40 flex h-10 min-w-0 max-w-[calc(100vw-var(--sidebar-width)-8rem)] items-center gap-2 overflow-visible",
             isComposerFooterCompact ? "gap-1.5" : "gap-2",
             showMobilePendingAnswerActions && "hidden sm:flex",
           )}
         >
-          <div className="-m-1 flex min-w-0 flex-wrap items-center justify-start gap-x-1 gap-y-1.5 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="-m-1 flex min-w-0 flex-1 flex-wrap items-center justify-start gap-x-1 gap-y-1.5 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <ProviderModelPicker
               compact={isComposerFooterCompact}
               activeInstanceId={selectedInstanceId}
@@ -1908,7 +1908,7 @@ export const ChatComposer = memo(
               data-chat-composer-primary-actions-compact={
                 isComposerPrimaryActionsCompact ? "true" : "false"
               }
-              className="flex shrink-0 flex-nowrap items-center justify-end gap-2 self-end"
+              className="flex shrink-0 flex-nowrap items-center justify-end gap-2 self-center"
             >
               {activeContextWindow ? <ContextWindowMeter usage={activeContextWindow} /> : null}
               {isPreparingWorktree ? (

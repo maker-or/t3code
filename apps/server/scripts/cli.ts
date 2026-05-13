@@ -40,6 +40,13 @@ class CliError extends Data.TaggedError("CliError")<{
   readonly cause?: unknown;
 }> {}
 
+/** Declared deps in `apps/server/package.json` that tsdown inlines into `dist/bin.mjs`; keep out of the published manifest. */
+const BUNDLED_PUBLISH_DEPENDENCY_NAMES = new Set([
+  "effect",
+  "@effect/platform-bun",
+  "@effect/platform-node",
+]);
+
 const RepoRoot = Effect.service(Path.Path).pipe(
   Effect.flatMap((path) => path.fromFileUrl(new URL("../../..", import.meta.url))),
 );
@@ -220,6 +227,18 @@ const publishCmd = Command.make(
           );
           assertRegistryDependencySpecs(dependencies, "apps/server dependencies");
 
+          const publishedDependencies = Object.fromEntries(
+            Object.entries(dependencies).filter(
+              ([name]) => !BUNDLED_PUBLISH_DEPENDENCY_NAMES.has(name),
+            ),
+          );
+          if (Object.keys(publishedDependencies).length === 0) {
+            return yield* new CliError({
+              message:
+                "Published dependencies would be empty after stripping inlined Effect packages. Update BUNDLED_PUBLISH_DEPENDENCY_NAMES or dependencies in apps/server/package.json.",
+            });
+          }
+
           const pkg: PackageJson = {
             name: serverPackageJson.name,
             repository: serverPackageJson.repository,
@@ -228,7 +247,7 @@ const publishCmd = Command.make(
             version,
             engines: serverPackageJson.engines,
             files: serverPackageJson.files,
-            dependencies,
+            dependencies: publishedDependencies,
             publishConfig: { access: "public" },
           };
 

@@ -305,10 +305,7 @@ function resolveDesktopDevServerUrl(): string {
 
 function backendChildEnv(): NodeJS.ProcessEnv {
   const env = { ...process.env };
-  delete env.T3CODE_PORT;
-  delete env.T3CODE_MODE;
-  delete env.T3CODE_NO_BROWSER;
-  delete env.T3CODE_HOST;
+  delete env.VITE_DEV_SERVER_URL;
   delete env.T3CODE_DESKTOP_WS_URL;
   delete env.T3CODE_DESKTOP_LAN_ACCESS;
   delete env.T3CODE_DESKTOP_LAN_HOST;
@@ -1472,6 +1469,13 @@ function startBackend(): void {
     env: {
       ...backendChildEnv(),
       ELECTRON_RUN_AS_NODE: "1",
+      T3CODE_MODE: "desktop",
+      T3CODE_PORT: String(backendPort),
+      T3CODE_HOST: backendBindHost,
+      T3CODE_NO_BROWSER: "1",
+      T3CODE_DESKTOP_BOOTSTRAP_TOKEN: backendBootstrapToken,
+      T3CODE_TAILSCALE_SERVE: desktopSettings.tailscaleServeEnabled ? "1" : "0",
+      T3CODE_TAILSCALE_SERVE_PORT: String(desktopSettings.tailscaleServePort),
     },
     stdio: captureBackendLogs
       ? ["ignore", "pipe", "pipe", "pipe"]

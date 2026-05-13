@@ -14,10 +14,12 @@ polarish is a minimal web GUI for coding agents (currently Codex, Claude, and Op
 
 ### Run without installing
 
-Requires **Node.js 22.19+** (or current Node 24). Older 22.x releases fail on startup (`undici` / engine checks).
+Requires **Node.js 22.19+** on your PATH. The CLI always runs on Node (use `npx` or `bunx`; the published `bin` re-execs Node so `bunx` is safe).
 
 ```bash
 npx @polarish/agent
+# or
+bunx @polarish/agent
 ```
 
 ### Desktop app
