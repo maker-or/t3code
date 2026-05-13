@@ -42,7 +42,10 @@ function normalizeSkillPath(path: string): string {
   return path.replaceAll("\\", "/").replace(/\/+$/, "");
 }
 
-function mergeSkillEntry(existing: ServerProviderSkill, next: ServerProviderSkill): ServerProviderSkill {
+function mergeSkillEntry(
+  existing: ServerProviderSkill,
+  next: ServerProviderSkill,
+): ServerProviderSkill {
   return {
     ...existing,
     ...next,

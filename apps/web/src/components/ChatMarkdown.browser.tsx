@@ -149,9 +149,9 @@ describe("ChatMarkdown", () => {
     );
 
     try {
-      await expect.element(page.getByRole("heading", { level: 1 })).toHaveTextContent(
-        "Review Follow Up",
-      );
+      await expect
+        .element(page.getByRole("heading", { level: 1 }))
+        .toHaveTextContent("Review Follow Up");
     } finally {
       await screen.unmount();
     }

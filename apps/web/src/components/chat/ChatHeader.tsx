@@ -137,7 +137,7 @@ export const ChatHeader = memo(function ChatHeader({
     <div className="@container/header-actions flex min-w-0 flex-1 items-center gap-2">
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden sm:gap-3">
         <SidebarTrigger className="size-7 shrink-0 md:hidden" />
-        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {projectThreads.map((thread, threadIndex) => {
             const selected =
               thread.environmentId === activeThreadEnvironmentId && thread.id === activeThreadId;
@@ -180,36 +180,36 @@ export const ChatHeader = memo(function ChatHeader({
               </Link>
             );
           })}
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <button
-                  type="button"
-                  aria-label="New thread"
-                  className="inline-flex size-7 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                  onClick={() => {
-                    if (activeProjectRef) {
-                      void handleNewThread(activeProjectRef);
-                    }
-                  }}
-                />
-              }
-            >
-              +
-            </TooltipTrigger>
-            <TooltipPopup side="bottom">New thread</TooltipPopup>
-          </Tooltip>
         </div>
-        {activeProjectName && (
+        {/*{activeProjectName && (
           <Badge variant="outline" className="min-w-0 shrink overflow-hidden">
             <span className="min-w-0 truncate">{activeProjectName}</span>
           </Badge>
-        )}
+        )}*/}
         {activeProjectName && !isGitRepo && (
           <Badge variant="outline" className="shrink-0 text-[10px] text-amber-700">
             No Git
           </Badge>
         )}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                aria-label="New thread"
+                className="inline-flex size-7 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                onClick={() => {
+                  if (activeProjectRef) {
+                    void handleNewThread(activeProjectRef);
+                  }
+                }}
+              />
+            }
+          >
+            +
+          </TooltipTrigger>
+          <TooltipPopup side="bottom">New thread</TooltipPopup>
+        </Tooltip>
       </div>
       <div className="fixed right-3 bottom-[calc(5dvh-18px)] z-40 flex h-10 shrink-0 items-center justify-end gap-2">
         {/*{activeProjectScripts && (

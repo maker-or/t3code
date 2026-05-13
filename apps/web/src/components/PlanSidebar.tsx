@@ -64,7 +64,8 @@ interface PlanSidebarProps {
   onClose: () => void;
 }
 
-const EMPTY_PLAN_SIDEBAR_SKILLS: ReadonlyArray<Pick<ServerProviderSkill, "name" | "displayName">> = [];
+const EMPTY_PLAN_SIDEBAR_SKILLS: ReadonlyArray<Pick<ServerProviderSkill, "name" | "displayName">> =
+  [];
 
 const PlanSidebar = memo(function PlanSidebar({
   activePlan,

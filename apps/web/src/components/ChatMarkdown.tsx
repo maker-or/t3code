@@ -637,7 +637,9 @@ function ChatMarkdown({
         return <h6 {...props}>{renderSkillInlineMarkdownChildren(children, skills)}</h6>;
       },
       blockquote({ node: _node, children, ...props }) {
-        return <blockquote {...props}>{renderSkillInlineMarkdownChildren(children, skills)}</blockquote>;
+        return (
+          <blockquote {...props}>{renderSkillInlineMarkdownChildren(children, skills)}</blockquote>
+        );
       },
       p({ node: _node, children, ...props }) {
         return <p {...props}>{renderSkillInlineMarkdownChildren(children, skills)}</p>;

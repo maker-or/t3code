@@ -7,7 +7,10 @@ function normalizeSkillPath(path: string): string {
   return path.replaceAll("\\", "/").replace(/\/+$/, "");
 }
 
-function mergeSkillEntry(existing: ServerProviderSkill, next: ServerProviderSkill): ServerProviderSkill {
+function mergeSkillEntry(
+  existing: ServerProviderSkill,
+  next: ServerProviderSkill,
+): ServerProviderSkill {
   return {
     ...existing,
     ...next,
@@ -81,6 +84,8 @@ export async function discoverLocalProviderSkills(cwd: string): Promise<ServerPr
     { path: NodePath.join(NodeOS.homedir(), ".codex", "skills"), scope: "user" as const },
   ];
 
-  const skills = await Promise.all(roots.map((root) => discoverSkillDirectories(root.path, root.scope)));
+  const skills = await Promise.all(
+    roots.map((root) => discoverSkillDirectories(root.path, root.scope)),
+  );
   return skills.flat();
 }

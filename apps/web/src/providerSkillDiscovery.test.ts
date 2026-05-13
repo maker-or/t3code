@@ -3,7 +3,9 @@ import type { EnvironmentApi, ServerProviderSkill } from "@t3tools/contracts";
 
 import { discoverLocalProviderSkills, mergeProviderSkills } from "./providerSkillDiscovery.core";
 
-function makeSkill(partial: Partial<ServerProviderSkill> & Pick<ServerProviderSkill, "name" | "path">) {
+function makeSkill(
+  partial: Partial<ServerProviderSkill> & Pick<ServerProviderSkill, "name" | "path">,
+) {
   return {
     enabled: true,
     ...partial,
