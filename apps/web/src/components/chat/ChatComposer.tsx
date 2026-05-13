@@ -96,7 +96,9 @@ import type { PendingUserInputDraftAnswer } from "../../pendingUserInput";
 import type { PendingApproval, PendingUserInput } from "../../session-logic";
 import { deriveLatestContextWindowSnapshot } from "../../lib/contextWindow";
 import { formatProviderSkillDisplayName } from "../../providerSkillPresentation";
+import { filterProviderSkillsForSlashMenu } from "../../providerSkillSlashMenu";
 import { searchProviderSkills } from "../../providerSkillSearch";
+import { useMergedProviderSkills } from "../../providerSkillDiscovery";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 
 const IMAGE_SIZE_LIMIT_LABEL = `${Math.round(PROVIDER_SEND_TURN_MAX_IMAGE_BYTES / (1024 * 1024))}MB`;
@@ -775,6 +777,16 @@ export const ChatComposer = memo(
     );
     const workspaceEntries = workspaceEntriesQuery.data?.entries ?? EMPTY_PROJECT_ENTRIES;
 
+    const resolvedProviderSkills = useMergedProviderSkills({
+      environmentId,
+      cwd: gitCwd ?? undefined,
+      providerSkills: selectedProviderStatus?.skills ?? [],
+    });
+    const slashMenuSkills = useMemo(
+      () => filterProviderSkillsForSlashMenu(resolvedProviderSkills, gitCwd),
+      [gitCwd, resolvedProviderSkills],
+    );
+
     const composerMenuItems = useMemo<ComposerCommandItem[]>(() => {
       if (!composerTrigger) return [];
       if (composerTrigger.kind === "path") {
@@ -822,11 +834,24 @@ export const ChatComposer = memo(
           }),
         );
         const query = composerTrigger.query.trim().toLowerCase();
-        const slashCommandItems = [...builtInSlashCommandItems, ...providerSlashCommandItems];
+        const commandItems = [...builtInSlashCommandItems, ...providerSlashCommandItems];
+        const skillMenuItems = searchProviderSkills(slashMenuSkills, composerTrigger.query).map(
+          (skill) => ({
+            id: `skill:${selectedProvider}:${skill.name}`,
+            type: "skill" as const,
+            provider: selectedProvider,
+            skill,
+            label: formatProviderSkillDisplayName(skill),
+            description:
+              skill.shortDescription ??
+              skill.description ??
+              (skill.scope ? `${skill.scope} skill` : "Run provider skill"),
+          }),
+        );
         if (!query) {
-          return slashCommandItems;
+          return [...commandItems, ...skillMenuItems];
         }
-        return searchSlashCommandItems(slashCommandItems, query);
+        return [...searchSlashCommandItems(commandItems, query), ...skillMenuItems];
       }
       if (composerTrigger.kind === "skill") {
         return searchProviderSkills(
@@ -845,7 +870,13 @@ export const ChatComposer = memo(
         }));
       }
       return [];
-    }, [composerTrigger, selectedProvider, selectedProviderStatus, workspaceEntries]);
+    }, [
+      composerTrigger,
+      selectedProvider,
+      selectedProviderStatus,
+      slashMenuSkills,
+      workspaceEntries,
+    ]);
 
     const composerMenuOpen = Boolean(composerTrigger);
     const composerMenuSearchKey = composerTrigger
@@ -918,9 +949,13 @@ export const ChatComposer = memo(
       if (composerTriggerKind === "skill") {
         return "No skills found. Try / to browse provider commands.";
       }
-      return composerTriggerKind === "path"
-        ? "No matching files or folders."
-        : "No matching command.";
+      if (composerTriggerKind === "path") {
+        return "No matching files or folders.";
+      }
+      if (composerTriggerKind === "slash-command") {
+        return "No matching commands or skills.";
+      }
+      return "No matching command.";
     }, [composerTriggerKind]);
 
     const pendingPrimaryAction = useMemo(

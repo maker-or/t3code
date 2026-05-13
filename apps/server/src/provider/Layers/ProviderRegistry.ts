@@ -43,18 +43,24 @@ import {
   resolveProviderStatusCachePath,
   writeProviderStatusCache,
 } from "../providerStatusCache.ts";
+import { discoverLocalProviderSkills, mergeLocalProviderSkills } from "../localSkills.ts";
 import type { ProviderInstance } from "../ProviderDriver.ts";
 import { makeManualOnlyProviderMaintenanceCapabilities } from "../providerMaintenance.ts";
 import type { ProviderSnapshotSource } from "../builtInProviderCatalog.ts";
 
 const loadProviders = (
   providerSources: ReadonlyArray<ProviderSnapshotSource>,
+  localSkills: ReadonlyArray<ServerProvider["skills"][number]>,
 ): Effect.Effect<ReadonlyArray<ServerProvider>> =>
   Effect.forEach(
     providerSources,
     (providerSource) =>
       providerSource.getSnapshot.pipe(
         Effect.flatMap((snapshot) => correlateSnapshotWithSource(providerSource, snapshot)),
+        Effect.map((snapshot) => ({
+          ...snapshot,
+          skills: mergeLocalProviderSkills(snapshot.skills, localSkills),
+        })),
       ),
     {
       concurrency: "unbounded",
@@ -181,6 +187,10 @@ export const ProviderRegistryLive = Layer.effect(
   Effect.gen(function* () {
     const instanceRegistry = yield* ProviderInstanceRegistry;
     const config = yield* ServerConfig;
+    const localSkills = yield* Effect.tryPromise({
+      try: () => discoverLocalProviderSkills(config.cwd),
+      catch: () => [] as ServerProvider["skills"],
+    });
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
 
@@ -198,7 +208,7 @@ export const ProviderRegistryLive = Layer.effect(
     // below.
     const bootInstances = yield* instanceRegistry.listInstances;
     const bootSources = bootInstances.map(buildSnapshotSource);
-    const fallbackProviders = yield* loadProviders(bootSources);
+    const fallbackProviders = yield* loadProviders(bootSources, localSkills);
     const fallbackByInstance = new Map<ProviderInstanceId, ServerProvider>();
     for (let index = 0; index < fallbackProviders.length; index++) {
       const provider = fallbackProviders[index];
@@ -340,11 +350,15 @@ export const ProviderRegistryLive = Layer.effect(
           for (const provider of nextProvidersWithUpdateState) {
             const key = snapshotInstanceKey(provider);
             updatedKeys.add(key);
+            const enrichedProvider = {
+              ...provider,
+              skills: mergeLocalProviderSkills(provider.skills, localSkills),
+            };
             mergedProviders.set(
               key,
               options?.replace === true
-                ? provider
-                : mergeProviderSnapshot(mergedProviders.get(key), provider),
+                ? enrichedProvider
+                : mergeProviderSnapshot(mergedProviders.get(key), enrichedProvider),
             );
           }
 

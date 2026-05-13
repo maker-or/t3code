@@ -40,6 +40,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ChevronDownIcon, TriangleAlertIcon, WifiOffIcon } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useGitStatus } from "~/lib/gitStatusState";
+import { useMergedProviderSkills } from "~/providerSkillDiscovery";
 import { usePrimaryEnvironmentId } from "../environments/primary";
 import { readEnvironmentApi } from "../environmentApi";
 import { isElectron } from "../env";
@@ -222,6 +223,7 @@ const IMAGE_ONLY_BOOTSTRAP_PROMPT =
 const EMPTY_ACTIVITIES: OrchestrationThreadActivity[] = [];
 const EMPTY_PROPOSED_PLANS: Thread["proposedPlans"] = [];
 const EMPTY_PROVIDERS: ServerProvider[] = [];
+const EMPTY_PROVIDER_SKILLS: ServerProvider["skills"] = [];
 const EMPTY_PENDING_USER_INPUT_ANSWERS: Record<string, PendingUserInputDraftAnswer> = {};
 type EnvironmentUnavailableState = {
   readonly environmentId: EnvironmentId;
@@ -1688,16 +1690,17 @@ export default function ChatView(props: ChatViewProps) {
   const activeProjectCwd = activeProject?.cwd ?? null;
   const activeThreadWorktreePath = activeThread?.worktreePath ?? null;
   const activeWorkspaceRoot = activeThreadWorktreePath ?? activeProjectCwd ?? undefined;
+  const activeProviderSkills = useMergedProviderSkills({
+    environmentId,
+    cwd: activeWorkspaceRoot,
+    providerSkills: activeProviderStatus?.skills ?? EMPTY_PROVIDER_SKILLS,
+  });
   const activeTerminalLaunchContext =
     terminalLaunchContext?.threadId === activeThreadId
       ? terminalLaunchContext
       : (storeServerTerminalLaunchContext ?? null);
   // Default true while loading to avoid toolbar flicker.
   const isGitRepo = gitStatusQuery.data?.isRepo ?? true;
-  const threadRunning =
-    activeThread?.session?.orchestrationStatus === "running" &&
-    activeThread.session.activeTurnId !== undefined &&
-    activeThread.session.activeTurnId === activeLatestTurn?.turnId;
   const showInlineDiffPanel =
     routeKind === "server" && diffPresentation === "inline-in-chat" && isGitRepo && diffOpen;
   const terminalShortcutLabelOptions = useMemo(
@@ -3669,7 +3672,6 @@ export default function ChatView(props: ChatViewProps) {
           {...(routeKind === "draft" && draftId ? { draftId } : {})}
           activeProjectId={activeProject?.id}
           activeProjectName={activeProject?.name}
-          threadRunning={threadRunning}
           isGitRepo={isGitRepo}
           openInCwd={gitCwd}
           activeProjectScripts={activeProject?.scripts}
@@ -3728,6 +3730,7 @@ export default function ChatView(props: ChatViewProps) {
               resolvedTheme={resolvedTheme}
               timestampFormat={timestampFormat}
               workspaceRoot={activeWorkspaceRoot}
+              skills={activeProviderSkills}
               onIsAtEndChange={onIsAtEndChange}
               composer={composerElement}
             />
@@ -3776,6 +3779,7 @@ export default function ChatView(props: ChatViewProps) {
             markdownCwd={gitCwd ?? undefined}
             workspaceRoot={activeWorkspaceRoot}
             timestampFormat={timestampFormat}
+            skills={activeProviderSkills}
             mode="sidebar"
             onClose={closePlanSidebar}
           />
@@ -3824,6 +3828,7 @@ export default function ChatView(props: ChatViewProps) {
             markdownCwd={gitCwd ?? undefined}
             workspaceRoot={activeWorkspaceRoot}
             timestampFormat={timestampFormat}
+            skills={activeProviderSkills}
             mode="sheet"
             onClose={closePlanSidebar}
           />

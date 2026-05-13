@@ -1,5 +1,5 @@
 import { memo, useState, useCallback } from "react";
-import type { EnvironmentId } from "@t3tools/contracts";
+import type { EnvironmentId, ServerProviderSkill } from "@t3tools/contracts";
 import { type TimestampFormat } from "@t3tools/contracts/settings";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -58,10 +58,13 @@ interface PlanSidebarProps {
   environmentId: EnvironmentId;
   markdownCwd: string | undefined;
   workspaceRoot: string | undefined;
+  skills?: ReadonlyArray<Pick<ServerProviderSkill, "name" | "displayName">>;
   timestampFormat: TimestampFormat;
   mode?: "sheet" | "sidebar";
   onClose: () => void;
 }
+
+const EMPTY_PLAN_SIDEBAR_SKILLS: ReadonlyArray<Pick<ServerProviderSkill, "name" | "displayName">> = [];
 
 const PlanSidebar = memo(function PlanSidebar({
   activePlan,
@@ -70,6 +73,7 @@ const PlanSidebar = memo(function PlanSidebar({
   environmentId,
   markdownCwd,
   workspaceRoot,
+  skills,
   timestampFormat,
   mode = "sidebar",
   onClose,
@@ -257,6 +261,7 @@ const PlanSidebar = memo(function PlanSidebar({
                     text={displayedPlanMarkdown ?? ""}
                     cwd={markdownCwd}
                     isStreaming={false}
+                    skills={skills ?? EMPTY_PLAN_SIDEBAR_SKILLS}
                   />
                 </div>
               ) : null}

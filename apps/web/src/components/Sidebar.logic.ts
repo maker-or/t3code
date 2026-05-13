@@ -144,6 +144,17 @@ export function useThreadJumpHintVisibility(): {
   };
 }
 
+/** Matches ChatView orchestration-backed "toolbar running": active turn aligns with latest turn. */
+export function isThreadTabRunning(
+  thread: Pick<SidebarThreadSummary, "session" | "latestTurn">,
+): boolean {
+  return (
+    thread.session?.orchestrationStatus === "running" &&
+    thread.session.activeTurnId !== undefined &&
+    thread.session.activeTurnId === thread.latestTurn?.turnId
+  );
+}
+
 export function hasUnseenCompletion(thread: ThreadStatusInput): boolean {
   if (!thread.latestTurn?.completedAt) return false;
   const completedAt = Date.parse(thread.latestTurn.completedAt);

@@ -138,4 +138,22 @@ describe("ChatMarkdown", () => {
       await screen.unmount();
     }
   });
+
+  it("renders skill tokens inside headings", async () => {
+    const screen = await render(
+      <ChatMarkdown
+        text="# Use $review-follow-up"
+        cwd="/repo/project"
+        skills={[{ name: "review-follow-up" }]}
+      />,
+    );
+
+    try {
+      await expect.element(page.getByRole("heading", { level: 1 })).toHaveTextContent(
+        "Review Follow Up",
+      );
+    } finally {
+      await screen.unmount();
+    }
+  });
 });

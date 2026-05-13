@@ -1,5 +1,5 @@
 import { memo, useState, useId } from "react";
-import type { EnvironmentId } from "@t3tools/contracts";
+import type { EnvironmentId, ServerProviderSkill } from "@t3tools/contracts";
 import {
   buildCollapsedProposedPlanPreviewMarkdown,
   buildProposedPlanMarkdownFilename,
@@ -28,16 +28,20 @@ import { stackedThreadToast, toastManager } from "../ui/toast";
 import { readEnvironmentApi } from "~/environmentApi";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 
+const EMPTY_PROPOSED_PLAN_SKILLS: ReadonlyArray<Pick<ServerProviderSkill, "name" | "displayName">> = [];
+
 export const ProposedPlanCard = memo(function ProposedPlanCard({
   planMarkdown,
   environmentId,
   cwd,
   workspaceRoot,
+  skills = EMPTY_PROPOSED_PLAN_SKILLS,
 }: {
   planMarkdown: string;
   environmentId: EnvironmentId;
   cwd: string | undefined;
   workspaceRoot: string | undefined;
+  skills?: ReadonlyArray<Pick<ServerProviderSkill, "name" | "displayName">>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
@@ -163,9 +167,9 @@ export const ProposedPlanCard = memo(function ProposedPlanCard({
       <div className="mt-4">
         <div className={cn("relative", canCollapse && !expanded && "max-h-104 overflow-hidden")}>
           {canCollapse && !expanded ? (
-            <ChatMarkdown text={collapsedPreview ?? ""} cwd={cwd} isStreaming={false} />
+            <ChatMarkdown text={collapsedPreview ?? ""} cwd={cwd} isStreaming={false} skills={skills} />
           ) : (
-            <ChatMarkdown text={displayedPlanMarkdown} cwd={cwd} isStreaming={false} />
+            <ChatMarkdown text={displayedPlanMarkdown} cwd={cwd} isStreaming={false} skills={skills} />
           )}
           {canCollapse && !expanded ? (
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-card/95 via-card/80 to-transparent" />

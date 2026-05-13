@@ -217,17 +217,16 @@ export const isCollapsedCursorAdjacentToMention = isCollapsedCursorAdjacentToInl
 
 export function detectComposerTrigger(text: string, cursorInput: number): ComposerTrigger | null {
   const cursor = clampCursor(text, cursorInput);
-  const lineStart = text.lastIndexOf("\n", Math.max(0, cursor - 1)) + 1;
-  const linePrefix = text.slice(lineStart, cursor);
-
-  if (linePrefix.startsWith("/")) {
-    const commandMatch = /^\/(\S*)$/.exec(linePrefix);
+  const slashTokenStart = tokenStartForCursor(text, cursor);
+  const slashToken = text.slice(slashTokenStart, cursor);
+  if (slashToken.startsWith("/")) {
+    const commandMatch = /^\/(\S*)$/.exec(slashToken);
     if (commandMatch) {
       const commandQuery = commandMatch[1] ?? "";
       return {
         kind: "slash-command",
         query: commandQuery,
-        rangeStart: lineStart,
+        rangeStart: slashTokenStart,
         rangeEnd: cursor,
       };
     }

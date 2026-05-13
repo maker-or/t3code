@@ -91,11 +91,15 @@ function groupCommandItems(
   }
 
   const builtInItems = items.filter((item) => item.type === "slash-command");
+  const skillItems = items.filter((item) => item.type === "skill");
   const providerItems = items.filter((item) => item.type === "provider-slash-command");
 
   const groups: ComposerCommandGroup[] = [];
   if (builtInItems.length > 0) {
     groups.push({ id: "built-in", label: "Built-in", items: builtInItems });
+  }
+  if (skillItems.length > 0) {
+    groups.push({ id: "skills", label: "Skills", items: skillItems });
   }
   if (providerItems.length > 0) {
     groups.push({ id: "provider", label: "Provider", items: providerItems });

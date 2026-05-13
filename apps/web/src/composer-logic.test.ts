@@ -79,6 +79,19 @@ describe("detectComposerTrigger", () => {
     });
   });
 
+  it("detects slash command trigger after whitespace mid-sentence", () => {
+    const prefix = "Please run ";
+    const text = `${prefix}/mo`;
+    const trigger = detectComposerTrigger(text, text.length);
+
+    expect(trigger).toEqual({
+      kind: "slash-command",
+      query: "mo",
+      rangeStart: prefix.length,
+      rangeEnd: text.length,
+    });
+  });
+
   it("detects $skill trigger at cursor", () => {
     const text = "Use $gh-fi";
     const trigger = detectComposerTrigger(text, text.length);

@@ -20,7 +20,9 @@ import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
 import { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { type ServerProviderSkill } from "@t3tools/contracts";
 import { VscodeEntryIcon } from "./chat/VscodeEntryIcon";
+import { renderSkillInlineMarkdownChildren } from "./chat/SkillInlineText";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import { stackedThreadToast, toastManager } from "./ui/toast";
 import { openInPreferredEditor } from "../editorPreferences";
@@ -62,7 +64,10 @@ interface ChatMarkdownProps {
   text: string;
   cwd: string | undefined;
   isStreaming?: boolean;
+  skills?: ReadonlyArray<Pick<ServerProviderSkill, "name" | "displayName">>;
 }
+
+const EMPTY_MARKDOWN_SKILLS: ReadonlyArray<Pick<ServerProviderSkill, "name" | "displayName">> = [];
 
 const CODE_FENCE_LANGUAGE_REGEX = /(?:^|\s)language-([^\s]+)/;
 const MAX_HIGHLIGHT_CACHE_ENTRIES = 500;
@@ -510,7 +515,12 @@ function areMarkdownFileLinkPropsEqual(
   );
 }
 
-function ChatMarkdown({ text, cwd, isStreaming = false }: ChatMarkdownProps) {
+function ChatMarkdown({
+  text,
+  cwd,
+  isStreaming = false,
+  skills = EMPTY_MARKDOWN_SKILLS,
+}: ChatMarkdownProps) {
   const { resolvedTheme } = useTheme();
   // Buffer large text chunks so they reveal progressively instead of
   // dumping everything at once. Normal token-by-token streaming passes
@@ -608,6 +618,39 @@ function ChatMarkdown({ text, cwd, isStreaming = false }: ChatMarkdownProps) {
   }, [isStreaming, text]);
   const markdownComponents = useMemo<Components>(
     () => ({
+      h1({ node: _node, children, ...props }) {
+        return <h1 {...props}>{renderSkillInlineMarkdownChildren(children, skills)}</h1>;
+      },
+      h2({ node: _node, children, ...props }) {
+        return <h2 {...props}>{renderSkillInlineMarkdownChildren(children, skills)}</h2>;
+      },
+      h3({ node: _node, children, ...props }) {
+        return <h3 {...props}>{renderSkillInlineMarkdownChildren(children, skills)}</h3>;
+      },
+      h4({ node: _node, children, ...props }) {
+        return <h4 {...props}>{renderSkillInlineMarkdownChildren(children, skills)}</h4>;
+      },
+      h5({ node: _node, children, ...props }) {
+        return <h5 {...props}>{renderSkillInlineMarkdownChildren(children, skills)}</h5>;
+      },
+      h6({ node: _node, children, ...props }) {
+        return <h6 {...props}>{renderSkillInlineMarkdownChildren(children, skills)}</h6>;
+      },
+      blockquote({ node: _node, children, ...props }) {
+        return <blockquote {...props}>{renderSkillInlineMarkdownChildren(children, skills)}</blockquote>;
+      },
+      p({ node: _node, children, ...props }) {
+        return <p {...props}>{renderSkillInlineMarkdownChildren(children, skills)}</p>;
+      },
+      li({ node: _node, children, ...props }) {
+        return <li {...props}>{renderSkillInlineMarkdownChildren(children, skills)}</li>;
+      },
+      th({ node: _node, children, ...props }) {
+        return <th {...props}>{renderSkillInlineMarkdownChildren(children, skills)}</th>;
+      },
+      td({ node: _node, children, ...props }) {
+        return <td {...props}>{renderSkillInlineMarkdownChildren(children, skills)}</td>;
+      },
       a({ node: _node, href, ...props }) {
         const normalizedHref = href ? normalizeMarkdownLinkHrefKey(href) : "";
         const fileLinkMeta = normalizedHref ? markdownFileLinkMetaByHref.get(normalizedHref) : null;
@@ -666,6 +709,7 @@ function ChatMarkdown({ text, cwd, isStreaming = false }: ChatMarkdownProps) {
       isStreaming,
       markdownFileLinkMetaByHref,
       resolvedTheme,
+      skills,
     ],
   );
 

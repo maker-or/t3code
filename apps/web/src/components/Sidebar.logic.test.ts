@@ -11,6 +11,7 @@ import {
   getProjectSortTimestamp,
   hasUnseenCompletion,
   isContextMenuPointerDown,
+  isThreadTabRunning,
   orderItemsByPreferredIds,
   resolveProjectStatusIndicator,
   resolveSidebarNewThreadSeedContext,
@@ -50,6 +51,46 @@ function makeLatestTurn(overrides?: {
     completedAt: overrides?.completedAt ?? "2026-03-09T10:05:00.000Z",
   };
 }
+
+describe("isThreadTabRunning", () => {
+  it("returns true when orchestration is running on the latest turn", () => {
+    const turnId = "turn-active" as never;
+    expect(
+      isThreadTabRunning({
+        session: {
+          provider: ProviderDriverKind.make("codex"),
+          status: "running",
+          activeTurnId: turnId,
+          createdAt: "2026-03-09T09:00:00.000Z",
+          updatedAt: "2026-03-09T09:30:00.000Z",
+          orchestrationStatus: "running",
+        },
+        latestTurn: {
+          ...makeLatestTurn({ completedAt: null }),
+          turnId,
+          state: "running",
+          completedAt: null,
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it("returns false when the active turn id does not match the latest turn", () => {
+    expect(
+      isThreadTabRunning({
+        session: {
+          provider: ProviderDriverKind.make("codex"),
+          status: "running",
+          activeTurnId: "turn-old" as never,
+          createdAt: "2026-03-09T09:00:00.000Z",
+          updatedAt: "2026-03-09T09:30:00.000Z",
+          orchestrationStatus: "running",
+        },
+        latestTurn: makeLatestTurn(),
+      }),
+    ).toBe(false);
+  });
+});
 
 describe("hasUnseenCompletion", () => {
   it("returns true when a thread completed after its last visit", () => {

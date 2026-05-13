@@ -364,52 +364,6 @@ function AboutVersionSection() {
   );
 }
 
-function AppearancePreview() {
-  const previewItems = [
-    {
-      label: "Background",
-      className: "bg-background border border-border text-foreground",
-    },
-    {
-      label: "Card",
-      className: "bg-card border border-border text-card-foreground",
-    },
-    {
-      label: "Text",
-      className: "bg-foreground border border-foreground text-background",
-    },
-    {
-      label: "Primary",
-      className: "bg-primary border border-primary text-primary-foreground",
-    },
-    {
-      label: "Accent",
-      className: "bg-accent border border-border text-accent-foreground",
-    },
-    {
-      label: "Border",
-      className: "bg-background border-2 border-border text-muted-foreground",
-    },
-    {
-      label: "Focus",
-      className: "bg-background border border-ring ring-2 ring-ring/60 text-foreground",
-    },
-  ] as const;
-
-  return (
-    <div className="grid grid-cols-2 gap-2 pt-3 sm:grid-cols-4">
-      {previewItems.map((item) => (
-        <div
-          key={item.label}
-          className={`rounded-xl px-3 py-3 text-xs font-medium shadow-sm/5 ${item.className}`}
-        >
-          {item.label}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function AppearanceSlider({
   value,
   min,
@@ -1050,13 +1004,6 @@ export function AppearanceSettingsPanel() {
             ariaLabel="Accent intensity"
             fill={`linear-gradient(180deg, color-mix(in oklab, var(--primary) 88%, white) 0%, color-mix(in oklab, var(--primary) 76%, black) 100%)`}
           />
-        </SettingsRow>
-
-        <SettingsRow
-          title="Preview"
-          description="These swatches use the live semantic tokens that the rest of the app reads."
-        >
-          <AppearancePreview />
         </SettingsRow>
       </SettingsSection>
     </SettingsPageContainer>

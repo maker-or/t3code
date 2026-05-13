@@ -6,8 +6,8 @@ import {
   type ResolvedKeybindingsConfig,
   type ThreadId,
 } from "@t3tools/contracts";
-import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { scopeProjectRef, scopeThreadRef, scopedThreadKey } from "@t3tools/client-runtime";
+import { Link } from "@tanstack/react-router";
 import { memo, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import GitActionsControl from "../GitActionsControl";
@@ -21,6 +21,8 @@ import { OpenInPicker } from "./OpenInPicker";
 import { usePrimaryEnvironmentId } from "../../environments/primary";
 import { selectSidebarThreadsForProjectRefs, useStore } from "../../store";
 import { buildThreadRouteParams } from "../../threadRoutes";
+import { useUiStateStore } from "../../uiStateStore";
+import { hasUnseenCompletion, isThreadTabRunning } from "../Sidebar.logic";
 import { useNewThreadHandler } from "../../hooks/useHandleNewThread";
 import type { SidebarThreadSummary } from "../../types";
 import { ThreadRunningIndicator } from "./ThreadRunningIndicator";
@@ -35,7 +37,6 @@ interface ChatHeaderProps {
   draftId?: DraftId;
   activeProjectId: ProjectId | undefined;
   activeProjectName: string | undefined;
-  threadRunning: boolean;
   isGitRepo: boolean;
   openInCwd: string | null;
   activeProjectScripts: ProjectScript[] | undefined;
@@ -74,7 +75,6 @@ export const ChatHeader = memo(function ChatHeader({
   draftId,
   activeProjectId,
   activeProjectName,
-  threadRunning,
   isGitRepo,
   openInCwd,
   activeProjectScripts,
@@ -94,7 +94,6 @@ export const ChatHeader = memo(function ChatHeader({
   onToggleTerminal,
   onToggleDiff,
 }: ChatHeaderProps) {
-  const navigate = useNavigate();
   const primaryEnvironmentId = usePrimaryEnvironmentId();
   const showOpenInPicker = shouldShowOpenInPicker({
     activeProjectName,
@@ -123,15 +122,38 @@ export const ChatHeader = memo(function ChatHeader({
         : EMPTY_THREAD_SUMMARIES,
     ),
   );
+  const threadLastVisitedAts = useUiStateStore(
+    useShallow((state) =>
+      projectThreads.map(
+        (thread) =>
+          state.threadLastVisitedAtById[
+            scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id))
+          ] ?? null,
+      ),
+    ),
+  );
 
   return (
     <div className="@container/header-actions flex min-w-0 flex-1 items-center gap-2">
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden sm:gap-3">
         <SidebarTrigger className="size-7 shrink-0 md:hidden" />
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-          {projectThreads.map((thread) => {
+          {projectThreads.map((thread, threadIndex) => {
             const selected =
               thread.environmentId === activeThreadEnvironmentId && thread.id === activeThreadId;
+            const runningTab = isThreadTabRunning(thread);
+            const unseenCompletion =
+              !selected &&
+              !runningTab &&
+              hasUnseenCompletion({
+                hasActionableProposedPlan: thread.hasActionableProposedPlan,
+                hasPendingApprovals: thread.hasPendingApprovals,
+                hasPendingUserInput: thread.hasPendingUserInput,
+                interactionMode: thread.interactionMode,
+                latestTurn: thread.latestTurn,
+                session: thread.session,
+                lastVisitedAt: threadLastVisitedAts[threadIndex] ?? undefined,
+              });
             return (
               <Link
                 key={`${thread.environmentId}:${thread.id}`}
@@ -140,14 +162,20 @@ export const ChatHeader = memo(function ChatHeader({
                   environmentId: thread.environmentId,
                   threadId: thread.id,
                 })}
-                className={`flex max-w-48 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs transition-colors ${
+                className={`relative flex max-w-48 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs transition-colors ${
                   selected
                     ? "bg-[var(--surface-elevated)] px-3.5 py-2 text-foreground"
                     : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                 }`}
                 title={thread.title}
               >
-                {selected && threadRunning ? <ThreadRunningIndicator active /> : null}
+                {unseenCompletion ? (
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute left-1 top-1 size-1.5 rounded-full bg-emerald-500 shadow-sm ring-1 ring-background dark:bg-emerald-400"
+                  />
+                ) : null}
+                {runningTab ? <ThreadRunningIndicator active /> : null}
                 <span className="truncate">{thread.title}</span>
               </Link>
             );

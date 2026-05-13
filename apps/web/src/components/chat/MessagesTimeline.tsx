@@ -1,4 +1,4 @@
-import { type EnvironmentId, type MessageId, type TurnId } from "@t3tools/contracts";
+import { type EnvironmentId, type MessageId, type ServerProviderSkill, type TurnId } from "@t3tools/contracts";
 import {
   createContext,
   memo,
@@ -35,6 +35,7 @@ import {
 import { Button } from "../ui/button";
 import { buildExpandedImagePreview, ExpandedImagePreview } from "./ExpandedImagePreview";
 import { ProposedPlanCard } from "./ProposedPlanCard";
+import { SkillInlineText } from "./SkillInlineText";
 import { ChangedFilesTree } from "./ChangedFilesTree";
 import { DiffStatLabel, hasNonZeroStat } from "./DiffStatLabel";
 import { MessageCopyButton } from "./MessageCopyButton";
@@ -77,6 +78,7 @@ interface TimelineRowSharedState {
   markdownCwd: string | undefined;
   resolvedTheme: "light" | "dark";
   workspaceRoot: string | undefined;
+  skills: ReadonlyArray<Pick<ServerProviderSkill, "name" | "displayName">>;
   activeThreadEnvironmentId: EnvironmentId;
   onRevertUserMessage: (messageId: MessageId) => void;
   onImageExpand: (preview: ExpandedImagePreview) => void;
@@ -98,6 +100,7 @@ const TimelineRowCtx = createContext<TimelineRowSharedState>(null!);
 const TimelineRowActivityCtx = createContext<TimelineRowActivityState>(null!);
 const TIMELINE_LIST_HEADER = <div className="h-3 sm:h-4" />;
 const TIMELINE_LIST_FOOTER = <div className="h-3 sm:h-4" />;
+const EMPTY_TIMELINE_SKILLS: ReadonlyArray<Pick<ServerProviderSkill, "name" | "displayName">> = [];
 
 // ---------------------------------------------------------------------------
 // Props (public API)
@@ -124,6 +127,7 @@ interface MessagesTimelineProps {
   resolvedTheme: "light" | "dark";
   timestampFormat: TimestampFormat;
   workspaceRoot: string | undefined;
+  skills?: ReadonlyArray<Pick<ServerProviderSkill, "name" | "displayName">>;
   onIsAtEndChange: (isAtEnd: boolean) => void;
   composer?: ReactNode;
 }
@@ -153,6 +157,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   resolvedTheme,
   timestampFormat,
   workspaceRoot,
+  skills = EMPTY_TIMELINE_SKILLS,
   onIsAtEndChange,
   composer,
 }: MessagesTimelineProps) {
@@ -216,6 +221,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       markdownCwd,
       resolvedTheme,
       workspaceRoot,
+      skills,
       activeThreadEnvironmentId,
       onRevertUserMessage,
       onImageExpand,
@@ -227,6 +233,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       markdownCwd,
       resolvedTheme,
       workspaceRoot,
+      skills,
       activeThreadEnvironmentId,
       onRevertUserMessage,
       onImageExpand,
@@ -438,6 +445,7 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
               <UserMessageBody
                 text={displayedUserMessage.visibleText}
                 terminalContexts={terminalContexts}
+                skills={ctx.skills}
               />
             )}
           </div>
@@ -485,6 +493,7 @@ function AssistantTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "mess
           text={messageText}
           cwd={ctx.markdownCwd}
           isStreaming={Boolean(row.message.streaming)}
+          skills={ctx.skills}
         />
         <AssistantChangedFilesSection
           turnSummary={row.assistantTurnDiffSummary}
@@ -556,6 +565,7 @@ function ProposedPlanTimelineRow({
         environmentId={ctx.activeThreadEnvironmentId}
         cwd={ctx.markdownCwd}
         workspaceRoot={ctx.workspaceRoot}
+        skills={ctx.skills}
       />
     </div>
   );
@@ -800,6 +810,7 @@ const UserMessageTerminalContextInlineLabel = memo(
 const UserMessageBody = memo(function UserMessageBody(props: {
   text: string;
   terminalContexts: ParsedTerminalContextEntry[];
+  skills: ReadonlyArray<Pick<ServerProviderSkill, "name" | "displayName">>;
 }) {
   if (props.terminalContexts.length > 0) {
     const hasEmbeddedInlineLabels = textContainsInlineTerminalContextLabels(
@@ -822,7 +833,7 @@ const UserMessageBody = memo(function UserMessageBody(props: {
         if (matchIndex > cursor) {
           inlineNodes.push(
             <span key={`user-terminal-context-inline-before:${context.header}:${cursor}`}>
-              {props.text.slice(cursor, matchIndex)}
+              <SkillInlineText text={props.text.slice(cursor, matchIndex)} skills={props.skills} />
             </span>,
           );
         }
@@ -839,7 +850,7 @@ const UserMessageBody = memo(function UserMessageBody(props: {
         if (cursor < props.text.length) {
           inlineNodes.push(
             <span key={`user-message-terminal-context-inline-rest:${cursor}`}>
-              {props.text.slice(cursor)}
+              <SkillInlineText text={props.text.slice(cursor)} skills={props.skills} />
             </span>,
           );
         }
@@ -867,7 +878,11 @@ const UserMessageBody = memo(function UserMessageBody(props: {
     }
 
     if (props.text.length > 0) {
-      inlineNodes.push(<span key="user-message-terminal-context-inline-text">{props.text}</span>);
+      inlineNodes.push(
+        <span key="user-message-terminal-context-inline-text">
+          <SkillInlineText text={props.text} skills={props.skills} />
+        </span>,
+      );
     } else if (inlinePrefix.length === 0) {
       return null;
     }
@@ -885,7 +900,7 @@ const UserMessageBody = memo(function UserMessageBody(props: {
 
   return (
     <div className="whitespace-pre-wrap wrap-break-word text-sm leading-relaxed text-foreground">
-      {props.text}
+      <SkillInlineText text={props.text} skills={props.skills} />
     </div>
   );
 });
