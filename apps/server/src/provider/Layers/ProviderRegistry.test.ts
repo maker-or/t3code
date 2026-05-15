@@ -897,7 +897,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, ServerSettingsService.layerTest(), T
       // assertions below fail.
       it.effect("propagates real Codex probe failures to the aggregator at boot", () =>
         Effect.gen(function* () {
-          const missingBinary = `t3code_codex_missing_${process.pid}_${Date.now()}`;
+          const missingBinary = `pipper_codex_missing_${process.pid}_${Date.now()}`;
           const serverSettings = yield* makeMutableServerSettingsService(
             Schema.decodeSync(ServerSettings)(
               deepMerge(DEFAULT_SERVER_SETTINGS, {
@@ -1005,8 +1005,8 @@ it.layer(Layer.mergeAll(NodeServices.layer, ServerSettingsService.layerTest(), T
       // top-level `live` export from `@effect/vitest` is the equivalent.
       live("re-probes when settings change the codex binaryPath", () =>
         Effect.gen(function* () {
-          const firstMissing = `t3code_codex_first_${process.pid}_${Date.now()}`;
-          const secondMissing = `t3code_codex_second_${process.pid}_${Date.now()}`;
+          const firstMissing = `pipper_codex_first_${process.pid}_${Date.now()}`;
+          const secondMissing = `pipper_codex_second_${process.pid}_${Date.now()}`;
           const serverSettings = yield* makeMutableServerSettingsService(
             Schema.decodeSync(ServerSettings)(
               deepMerge(DEFAULT_SERVER_SETTINGS, {
@@ -1457,7 +1457,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, ServerSettingsService.layerTest(), T
       );
 
       it.effect("runs Claude status probes with the configured Claude HOME", () => {
-        const claudeHome = "/tmp/t3code-claude-home";
+        const claudeHome = "/tmp/pipper-claude-home";
         const recorded = recordingMockSpawnerLayer((args) => {
           const joined = args.join(" ");
           if (joined === "--version") return { stdout: "1.0.0\n", stderr: "", code: 0 };

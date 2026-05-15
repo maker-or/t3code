@@ -262,10 +262,13 @@ describe("deriveMessagesTimelineRows", () => {
         row.kind === "message" && row.message.role === "assistant",
     );
 
-    expect(assistantRows).toHaveLength(2);
-    expect(assistantRows[0]?.showAssistantCopyButton).toBe(false);
-    expect(assistantRows[1]?.showAssistantCopyButton).toBe(true);
-    expect(assistantRows[1]?.showCompletionDivider).toBe(true);
+    // The intermediate thought is absorbed into completionTurnRows; only the
+    // final assistant message remains as a top-level row.
+    expect(assistantRows).toHaveLength(1);
+    expect(assistantRows[0]?.showAssistantCopyButton).toBe(true);
+    expect(assistantRows[0]?.showCompletionDivider).toBe(true);
+    expect(assistantRows[0]?.completionTurnRows).toHaveLength(1);
+    expect(assistantRows[0]?.completionTurnRows?.[0]?.kind).toBe("message");
   });
 
   it("projects assistant diff summaries and user revert counts onto the affected rows", () => {

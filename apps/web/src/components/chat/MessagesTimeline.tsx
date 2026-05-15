@@ -492,7 +492,7 @@ function AssistantTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "mess
 
   return (
     <>
-      {row.showCompletionDivider && <AssistantCompletionDivider />}
+      {row.showCompletionDivider && <CompletionAccordion turnRows={row.completionTurnRows} />}
       <div className="min-w-0 px-1 py-0.5">
         <ChatMarkdown
           text={messageText}
@@ -514,18 +514,91 @@ function AssistantTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "mess
   );
 }
 
-function AssistantCompletionDivider() {
+/** Collapsible accordion that replaces the old horizontal-line completion
+ *  divider. Shows "Worked for X" as a light-text trigger; when expanded,
+ *  reveals all intermediate turn content (assistant messages, work groups,
+ *  proposed plans) that preceded the final response. Defaults to collapsed. */
+function CompletionAccordion({
+  turnRows,
+}: {
+  turnRows: Extract<TimelineRow, { kind: "message" }>["completionTurnRows"];
+}) {
   const activity = use(TimelineRowActivityCtx);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const hasTurnRows = turnRows != null && turnRows.length > 0;
+  const summaryText = activity.completionSummary ?? "Completed";
+
+  if (!hasTurnRows) {
+    return <div className="my-2 px-1 py-1 text-xs text-muted-foreground/50">{summaryText}</div>;
+  }
 
   return (
-    <div className="my-3 flex items-center gap-3">
-      <span className="h-px flex-1 bg-border" />
-      <span className="rounded-full border border-border bg-background px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80">
-        {activity.completionSummary ? `Response • ${activity.completionSummary}` : "Response"}
-      </span>
-      <span className="h-px flex-1 bg-border" />
+    <div className="my-2">
+      <button
+        type="button"
+        className="flex items-center gap-1.5 rounded-md px-1 py-1 text-xs text-muted-foreground/55 transition-colors duration-150 hover:text-muted-foreground/80"
+        onClick={() => setIsExpanded((v) => !v)}
+        aria-expanded={isExpanded}
+      >
+        <ChevronDownIcon
+          className={cn(
+            "size-3 shrink-0 text-muted-foreground/40 transition-transform duration-200",
+            isExpanded ? "rotate-0" : "-rotate-90",
+          )}
+        />
+        <span>{summaryText}</span>
+      </button>
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows] duration-200 ease-out",
+          isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="space-y-3 pt-2 pb-1">
+            {turnRows.map((turnRow) => (
+              <CompletionAccordionRow key={turnRow.id} row={turnRow} />
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
+}
+
+/** Renders a single absorbed turn row inside the completion accordion. */
+function CompletionAccordionRow({ row }: { row: MessagesTimelineRow }) {
+  const ctx = use(TimelineRowCtx);
+
+  if (row.kind === "work") {
+    return <WorkGroupSection groupedEntries={row.groupedEntries} />;
+  }
+
+  if (row.kind === "message" && row.message.role === "assistant") {
+    const text = row.message.text || "";
+    if (text.trim().length === 0) return null;
+    return (
+      <div className="min-w-0 px-1 py-0.5">
+        <ChatMarkdown text={text} cwd={ctx.markdownCwd} skills={ctx.skills} />
+      </div>
+    );
+  }
+
+  if (row.kind === "proposed-plan") {
+    return (
+      <div className="min-w-0 px-1 py-0.5">
+        <ProposedPlanCard
+          planMarkdown={row.proposedPlan.planMarkdown}
+          environmentId={ctx.activeThreadEnvironmentId}
+          cwd={ctx.markdownCwd}
+          workspaceRoot={ctx.workspaceRoot}
+          skills={ctx.skills}
+        />
+      </div>
+    );
+  }
+
+  return null;
 }
 
 function AssistantCopyButton({ row }: { row: Extract<TimelineRow, { kind: "message" }> }) {
@@ -769,7 +842,7 @@ function AssistantChangedFilesSectionInner({
           <Button
             type="button"
             size="xs"
-            variant="outline"
+            variant="link"
             data-scroll-anchor-ignore
             onClick={() => setExpanded(routeThreadKey, turnSummary.turnId, !allDirectoriesExpanded)}
           >
@@ -778,7 +851,7 @@ function AssistantChangedFilesSectionInner({
           <Button
             type="button"
             size="xs"
-            variant="outline"
+            variant="link"
             onClick={() => onOpenTurnDiff(turnSummary.turnId, checkpointFiles[0]?.path)}
           >
             View diff

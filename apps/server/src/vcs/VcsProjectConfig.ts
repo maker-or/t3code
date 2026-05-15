@@ -55,7 +55,7 @@ export const make = Effect.fn("makeVcsProjectConfig")(function* () {
   const findConfigPath = Effect.fn("VcsProjectConfig.findConfigPath")(function* (cwd: string) {
     let current = cwd;
     while (true) {
-      const candidate = path.join(current, ".t3code", "vcs.json");
+      const candidate = path.join(current, ".pipper", "vcs.json");
       if (yield* fileSystem.exists(candidate).pipe(Effect.orElseSucceed(() => false))) {
         return candidate;
       }

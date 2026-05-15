@@ -130,10 +130,10 @@ const desktopAppBranding: DesktopAppBranding = resolveDesktopAppBranding({
   appVersion: app.getVersion(),
 });
 const APP_DISPLAY_NAME = desktopAppBranding.displayName;
-const APP_USER_MODEL_ID = isDevelopment ? "com.t3tools.t3code.dev" : "com.t3tools.t3code";
-const LINUX_DESKTOP_ENTRY_NAME = isDevelopment ? "t3code-dev.desktop" : "t3code.desktop";
-const LINUX_WM_CLASS = isDevelopment ? "t3code-dev" : "t3code";
-const USER_DATA_DIR_NAME = isDevelopment ? "t3code-dev" : "t3code";
+const APP_USER_MODEL_ID = isDevelopment ? "com.t3tools.pipper.dev" : "com.t3tools.pipper";
+const LINUX_DESKTOP_ENTRY_NAME = isDevelopment ? "pipper-dev.desktop" : "pipper.desktop";
+const LINUX_WM_CLASS = isDevelopment ? "pipper-dev" : "pipper";
+const USER_DATA_DIR_NAME = isDevelopment ? "pipper-dev" : "pipper";
 const LEGACY_USER_DATA_DIR_NAME = isDevelopment ? "T3 Code (Dev)" : "T3 Code (Alpha)";
 const COMMIT_HASH_PATTERN = /^[0-9a-f]{7,40}$/i;
 const COMMIT_HASH_DISPLAY_LENGTH = 12;
@@ -772,8 +772,8 @@ function resolveEmbeddedCommitHash(): string | null {
 
   try {
     const raw = FS.readFileSync(packageJsonPath, "utf8");
-    const parsed = JSON.parse(raw) as { t3codeCommitHash?: unknown };
-    return normalizeCommitHash(parsed.t3codeCommitHash);
+    const parsed = JSON.parse(raw) as { pipperCommitHash?: unknown };
+    return normalizeCommitHash(parsed.pipperCommitHash);
   } catch {
     return null;
   }
@@ -1106,7 +1106,7 @@ function resolveIconPath(ext: "ico" | "icns" | "png"): string | null {
  * parentheses (e.g. `~/.config/T3 Code (Alpha)` on Linux). This is
  * unfriendly for shell usage and violates Linux naming conventions.
  *
- * We override it to a clean lowercase name (`t3code`). If the legacy
+ * We override it to a clean lowercase name (`pipper`). If the legacy
  * directory already exists we keep using it so existing users don't
  * lose their Chromium profile data (localStorage, cookies, sessions).
  */

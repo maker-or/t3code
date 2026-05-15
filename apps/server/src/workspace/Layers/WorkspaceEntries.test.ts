@@ -27,7 +27,7 @@ const TestLayer = Layer.empty.pipe(
 const makeTempDir = Effect.fn(function* (opts?: { prefix?: string; git?: boolean }) {
   const fileSystem = yield* FileSystem.FileSystem;
   const dir = yield* fileSystem.makeTempDirectoryScoped({
-    prefix: opts?.prefix ?? "t3code-workspace-entries-",
+    prefix: opts?.prefix ?? "pipper-workspace-entries-",
   });
   if (opts?.git) {
     yield* git(dir, ["init"]);
@@ -104,7 +104,7 @@ it.layer(TestLayer)("WorkspaceEntriesLive", (it) => {
 
     it.effect("filters and ranks entries by query", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-query-" });
+        const cwd = yield* makeTempDir({ prefix: "pipper-workspace-query-" });
         yield* writeTextFile(cwd, "src/components/Composer.tsx");
         yield* writeTextFile(cwd, "src/components/composePrompt.ts");
         yield* writeTextFile(cwd, "docs/composition.md");
@@ -121,7 +121,7 @@ it.layer(TestLayer)("WorkspaceEntriesLive", (it) => {
 
     it.effect("supports fuzzy subsequence queries for composer path search", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-fuzzy-query-" });
+        const cwd = yield* makeTempDir({ prefix: "pipper-workspace-fuzzy-query-" });
         yield* writeTextFile(cwd, "src/components/Composer.tsx");
         yield* writeTextFile(cwd, "src/components/composePrompt.ts");
         yield* writeTextFile(cwd, "docs/composition.md");
@@ -137,7 +137,7 @@ it.layer(TestLayer)("WorkspaceEntriesLive", (it) => {
 
     it.effect("prioritizes exact basename matches ahead of broader path matches", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-exact-ranking-" });
+        const cwd = yield* makeTempDir({ prefix: "pipper-workspace-exact-ranking-" });
         yield* writeTextFile(cwd, "src/components/Composer.tsx");
         yield* writeTextFile(cwd, "docs/composer.tsx-notes.md");
 
@@ -149,7 +149,7 @@ it.layer(TestLayer)("WorkspaceEntriesLive", (it) => {
 
     it.effect("tracks truncation without sorting every fuzzy match", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-fuzzy-limit-" });
+        const cwd = yield* makeTempDir({ prefix: "pipper-workspace-fuzzy-limit-" });
         yield* writeTextFile(cwd, "src/components/Composer.tsx");
         yield* writeTextFile(cwd, "src/components/composePrompt.ts");
         yield* writeTextFile(cwd, "docs/composition.md");
@@ -163,7 +163,7 @@ it.layer(TestLayer)("WorkspaceEntriesLive", (it) => {
 
     it.effect("excludes gitignored paths for git repositories", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-gitignore-", git: true });
+        const cwd = yield* makeTempDir({ prefix: "pipper-workspace-gitignore-", git: true });
         yield* writeTextFile(cwd, ".gitignore", ".convex/\nconvex/\nignored.txt\n");
         yield* writeTextFile(cwd, "src/keep.ts", "export {};");
         yield* writeTextFile(cwd, "ignored.txt", "ignore me");
@@ -184,7 +184,7 @@ it.layer(TestLayer)("WorkspaceEntriesLive", (it) => {
     it.effect("excludes tracked paths that match ignore rules", () =>
       Effect.gen(function* () {
         const cwd = yield* makeTempDir({
-          prefix: "t3code-workspace-tracked-gitignore-",
+          prefix: "pipper-workspace-tracked-gitignore-",
           git: true,
         });
         yield* writeTextFile(cwd, ".convex/local-storage/data.json", "{}");
@@ -203,7 +203,7 @@ it.layer(TestLayer)("WorkspaceEntriesLive", (it) => {
 
     it.effect("excludes .convex in non-git workspaces", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-non-git-convex-" });
+        const cwd = yield* makeTempDir({ prefix: "pipper-workspace-non-git-convex-" });
         yield* writeTextFile(cwd, ".convex/local-storage/data.json", "{}");
         yield* writeTextFile(cwd, "src/keep.ts", "export {};");
 
@@ -218,7 +218,7 @@ it.layer(TestLayer)("WorkspaceEntriesLive", (it) => {
 
     it.effect("deduplicates concurrent index builds for the same cwd", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-concurrent-build-" });
+        const cwd = yield* makeTempDir({ prefix: "pipper-workspace-concurrent-build-" });
         yield* writeTextFile(cwd, "src/components/Composer.tsx");
 
         let rootReadCount = 0;
@@ -248,7 +248,7 @@ it.layer(TestLayer)("WorkspaceEntriesLive", (it) => {
 
     it.effect("limits concurrent directory reads while walking the filesystem", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-read-concurrency-" });
+        const cwd = yield* makeTempDir({ prefix: "pipper-workspace-read-concurrency-" });
         yield* Effect.forEach(
           Array.from({ length: 80 }, (_, index) => index),
           (index) => writeTextFile(cwd, `group-${index}/entry-${index}.ts`, "export {};"),
@@ -287,7 +287,7 @@ it.layer(TestLayer)("WorkspaceEntriesLive", (it) => {
       Effect.gen(function* () {
         const workspaceEntries = yield* WorkspaceEntries;
         const path = yield* Path.Path;
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-browse-prefix-" });
+        const cwd = yield* makeTempDir({ prefix: "pipper-workspace-browse-prefix-" });
         yield* writeTextFile(cwd, "alphabet.txt", "ignore me");
         yield* writeTextFile(cwd, "alpha/index.ts", "export {};\n");
         yield* writeTextFile(cwd, "alpine/index.ts", "export {};\n");
@@ -310,7 +310,7 @@ it.layer(TestLayer)("WorkspaceEntriesLive", (it) => {
       Effect.gen(function* () {
         const workspaceEntries = yield* WorkspaceEntries;
         const path = yield* Path.Path;
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-browse-hidden-" });
+        const cwd = yield* makeTempDir({ prefix: "pipper-workspace-browse-hidden-" });
         yield* writeTextFile(cwd, ".config/settings.json", "{}");
         yield* writeTextFile(cwd, "config/settings.json", "{}");
 
@@ -333,7 +333,7 @@ it.layer(TestLayer)("WorkspaceEntriesLive", (it) => {
       Effect.gen(function* () {
         const workspaceEntries = yield* WorkspaceEntries;
         const path = yield* Path.Path;
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-browse-relative-" });
+        const cwd = yield* makeTempDir({ prefix: "pipper-workspace-browse-relative-" });
         yield* writeTextFile(cwd, "packages/pkg.json", "{}");
 
         const result = yield* workspaceEntries.browse({

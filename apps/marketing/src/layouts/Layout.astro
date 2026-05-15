@@ -5,8 +5,8 @@ interface Props {
 }
 
 const {
-    title = "polarish",
-    description = "polarish — the best way to code with AI.",
+    title = "pipper",
+    description = "pipper — Better Interface for your agent.",
 } = Astro.props;
 ---
 
@@ -18,7 +18,7 @@ const {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
-            href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Averia+Serif+Libre:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap"
             rel="stylesheet"
         />
         <link rel="icon" href="/favicon.ico" sizes="48x48" />
@@ -39,7 +39,16 @@ const {
     </head>
     <body>
         <div class="page">
-            <main class="main">
+            <header class="w-full max-w-7xl mx-auto px-8 pt-6 md:pt-10 flex justify-between items-center flex-shrink-0">
+                <a href="/" class="font-['Averia_Serif_Libre'] italic text-3xl md:text-4xl tracking-tight text-[#5474AF] hover:opacity-80 transition-opacity">
+                    pipper
+                </a>
+                <nav class="flex items-center gap-8 md:gap-12 font-['Averia_Serif_Libre'] text-xl md:text-2xl text-[#5474AF]">
+                    <a href="https://github.com/maker-or/pipper" target="_blank" rel="noopener noreferrer" class="hover:text-[#0C3A8F] transition-colors">Github</a>
+                    <a href="/download" class="hover:text-[#0C3A8F] transition-colors">Download</a>
+                </nav>
+            </header>
+            <main class="main flex-1 flex flex-col items-center w-full min-h-0">
                 <slot />
             </main>
         </div>
@@ -47,14 +56,16 @@ const {
 </html>
 
 <style is:global>
+    @import url('https://fonts.googleapis.com/css2?family=Averia+Serif+Libre:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap');
+
     :root {
-        --bg: #070c0d;
-        --fg: #efffe1;
-        --fg-muted: #879282;
-        --fg-dim: rgba(135, 146, 130, 0.72);
-        --border: rgba(239, 255, 225, 0.1);
-        --surface: rgba(255, 255, 255, 0.03);
-        --surface-strong: rgba(255, 255, 255, 0.05);
+        --bg: #FFFDF4;
+        --fg: #0C3A8F;
+        --fg-muted: #5474AF;
+        --fg-dim: rgba(84, 116, 175, 0.72);
+        --border: rgba(12, 58, 143, 0.15);
+        --surface: rgba(12, 58, 143, 0.04);
+        --surface-strong: rgba(12, 58, 143, 0.08);
     }
 
     * {
@@ -64,53 +75,19 @@ const {
     }
 
     html {
-        color-scheme: dark;
+        color-scheme: light;
+        height: 100svh;
+        overflow: hidden;
     }
 
     body {
         background: var(--bg);
         color: var(--fg);
-        font-family:
-            "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-family: 'Averia Serif Libre', serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        min-height: 100vh;
-        overflow-x: hidden;
-    }
-
-    body::after {
-        content: "";
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        opacity: 0.035;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-        background-repeat: repeat;
-        background-size: 256px 256px;
-        z-index: 9999;
-    }
-
-    body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        background:
-            radial-gradient(
-                circle at 18% 16%,
-                rgba(239, 255, 225, 0.12),
-                transparent 24%
-            ),
-            radial-gradient(
-                circle at 82% 22%,
-                rgba(135, 146, 130, 0.16),
-                transparent 26%
-            ),
-            radial-gradient(
-                circle at 50% 100%,
-                rgba(239, 255, 225, 0.08),
-                transparent 32%
-            );
+        height: 100svh;
+        overflow: hidden;
     }
 
     a {
@@ -136,122 +113,10 @@ const {
 </style>
 
 <style>
-    /* ── Page ── */
-
     .page {
-        min-height: 100vh;
+        height: 100svh;
         display: flex;
         flex-direction: column;
-        overflow-x: hidden;
-    }
-
-    /* ── Navbar ── */
-
-    .nav {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 1.5rem 2rem;
-    }
-
-    .nav-brand {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        color: var(--fg-muted);
-        font-size: 0.78rem;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-    }
-
-    .nav-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 9px;
-        border: 1px solid var(--border);
-    }
-
-    .nav-github {
-        display: flex;
-        align-items: center;
-        gap: 0.35rem;
-        color: var(--fg);
-        font-size: 0.78rem;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        padding: 0.8rem 1rem;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: var(--surface);
-        transition:
-            background 0.25s ease,
-            transform 0.25s ease,
-            border-color 0.25s ease;
-    }
-
-    .nav-github:hover {
-        background: var(--surface-strong);
-        transform: translateY(-1px);
-        border-color: rgba(239, 255, 225, 0.18);
-    }
-
-    .nav-github-arrow {
-        display: inline-block;
-        transition: transform 0.3s ease;
-    }
-
-    .nav-github:hover .nav-github-arrow {
-        transform: translateX(2px) translateY(-1px);
-    }
-
-    /* ── Main content ── */
-
-    .main {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        width: 100%;
-    }
-
-    /* ── Footer ── */
-
-    .footer {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 1.25rem 2rem 1.5rem;
-        font-size: 0.72rem;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: var(--fg-dim);
-    }
-
-    .footer-links {
-        display: flex;
-        gap: 1.25rem;
-    }
-
-    .footer-links a {
-        color: var(--fg-dim);
-        transition: color 0.3s ease;
-    }
-
-    .footer-links a:hover {
-        color: var(--fg);
-    }
-
-    /* ── Mobile ── */
-
-    @media (max-width: 640px) {
-        .nav {
-            padding: 1rem;
-        }
-
-        .footer {
-            padding: 1rem;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
+        overflow: hidden;
     }
 </style>

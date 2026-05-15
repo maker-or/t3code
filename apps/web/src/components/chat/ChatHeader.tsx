@@ -7,12 +7,12 @@ import {
   type ThreadId,
 } from "@t3tools/contracts";
 import { scopeProjectRef, scopeThreadRef, scopedThreadKey } from "@t3tools/client-runtime";
-import { Link } from "@tanstack/react-router";
-import { memo, useMemo } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { memo, useCallback, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import GitActionsControl from "../GitActionsControl";
 import { type DraftId } from "~/composerDraftStore";
-import { PlusMinusIcon, TerminalIcon } from "@phosphor-icons/react";
+import { PlusMinusIcon, TerminalIcon, XIcon } from "@phosphor-icons/react";
 import { Badge } from "../ui/badge";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import ProjectScriptsControl, { type NewProjectScriptInput } from "../ProjectScriptsControl";
@@ -122,9 +122,26 @@ export const ChatHeader = memo(function ChatHeader({
         : EMPTY_THREAD_SUMMARIES,
     ),
   );
-  const threadLastVisitedAts = useUiStateStore(
+  const dismissedHeaderThreadKeys = useUiStateStore(
+    useShallow((state) => state.dismissedHeaderThreadKeys),
+  );
+  const dismissHeaderThread = useUiStateStore((state) => state.dismissHeaderThread);
+  const navigate = useNavigate();
+
+  // Filter out dismissed threads but always keep the active thread visible.
+  const visibleThreads = useMemo(() => {
+    return projectThreads.filter((thread) => {
+      const key = scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id));
+      const isActive =
+        thread.environmentId === activeThreadEnvironmentId && thread.id === activeThreadId;
+      return isActive || !dismissedHeaderThreadKeys[key];
+    });
+  }, [projectThreads, dismissedHeaderThreadKeys, activeThreadEnvironmentId, activeThreadId]);
+
+  // Recompute visited-at values for the filtered visible threads.
+  const visibleThreadLastVisitedAts = useUiStateStore(
     useShallow((state) =>
-      projectThreads.map(
+      visibleThreads.map(
         (thread) =>
           state.threadLastVisitedAtById[
             scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id))
@@ -133,12 +150,42 @@ export const ChatHeader = memo(function ChatHeader({
     ),
   );
 
+  const handleDismissThread = useCallback(
+    (thread: SidebarThreadSummary, e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const key = scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id));
+      const isActive =
+        thread.environmentId === activeThreadEnvironmentId && thread.id === activeThreadId;
+
+      if (isActive && visibleThreads.length > 1) {
+        // Navigate to the nearest sibling before dismissing.
+        const currentIndex = visibleThreads.findIndex(
+          (t) => t.environmentId === thread.environmentId && t.id === thread.id,
+        );
+        const nextThread = visibleThreads[currentIndex + 1] ?? visibleThreads[currentIndex - 1];
+        if (nextThread) {
+          void navigate({
+            to: "/$environmentId/$threadId",
+            params: buildThreadRouteParams({
+              environmentId: nextThread.environmentId,
+              threadId: nextThread.id,
+            }),
+          });
+        }
+      }
+
+      dismissHeaderThread(key);
+    },
+    [activeThreadEnvironmentId, activeThreadId, visibleThreads, navigate, dismissHeaderThread],
+  );
+
   return (
     <div className="@container/header-actions flex min-w-0 flex-1 items-center gap-2">
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden sm:gap-3">
         <SidebarTrigger className="size-7 shrink-0 md:hidden" />
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {projectThreads.map((thread, threadIndex) => {
+          {visibleThreads.map((thread, threadIndex) => {
             const selected =
               thread.environmentId === activeThreadEnvironmentId && thread.id === activeThreadId;
             const runningTab = isThreadTabRunning(thread);
@@ -152,32 +199,48 @@ export const ChatHeader = memo(function ChatHeader({
                 interactionMode: thread.interactionMode,
                 latestTurn: thread.latestTurn,
                 session: thread.session,
-                lastVisitedAt: threadLastVisitedAts[threadIndex] ?? undefined,
+                lastVisitedAt: visibleThreadLastVisitedAts[threadIndex] ?? undefined,
               });
+            // Only show the dismiss button when there are multiple visible tabs.
+            const canDismiss = visibleThreads.length > 1;
             return (
-              <Link
+              <div
                 key={`${thread.environmentId}:${thread.id}`}
-                to="/$environmentId/$threadId"
-                params={buildThreadRouteParams({
-                  environmentId: thread.environmentId,
-                  threadId: thread.id,
-                })}
-                className={`relative flex max-w-48 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs transition-colors ${
-                  selected
-                    ? "bg-[var(--surface-elevated)] px-3.5 py-2 text-foreground"
-                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-                }`}
-                title={thread.title}
+                className="group/tab relative flex shrink-0 items-center"
               >
-                {unseenCompletion ? (
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute left-1 top-1 size-1.5 rounded-full bg-emerald-500 shadow-sm ring-1 ring-background dark:bg-emerald-400"
-                  />
+                <Link
+                  to="/$environmentId/$threadId"
+                  params={buildThreadRouteParams({
+                    environmentId: thread.environmentId,
+                    threadId: thread.id,
+                  })}
+                  className={`relative flex max-w-48 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 pr-6 text-xs transition-colors ${
+                    selected
+                      ? "bg-[var(--surface-elevated)] px-3.5 py-2 text-foreground"
+                      : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                  }`}
+                  title={thread.title}
+                >
+                  {unseenCompletion ? (
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute left-1 top-1 size-1.5 rounded-full bg-emerald-500 shadow-sm ring-1 ring-background dark:bg-emerald-400"
+                    />
+                  ) : null}
+                  {runningTab ? <ThreadRunningIndicator active /> : null}
+                  <span className="truncate">{thread.title}</span>
+                </Link>
+                {canDismiss ? (
+                  <button
+                    type="button"
+                    aria-label={`Close ${thread.title} tab`}
+                    className="absolute right-1 top-1/2 flex size-4 -translate-y-1/2 items-center justify-center rounded opacity-0 transition-opacity hover:bg-accent group-hover/tab:opacity-100"
+                    onClick={(e) => handleDismissThread(thread, e)}
+                  >
+                    <XIcon size={10} weight="bold" />
+                  </button>
                 ) : null}
-                {runningTab ? <ThreadRunningIndicator active /> : null}
-                <span className="truncate">{thread.title}</span>
-              </Link>
+              </div>
             );
           })}
         </div>

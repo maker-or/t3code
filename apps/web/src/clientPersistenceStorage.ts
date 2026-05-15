@@ -9,9 +9,9 @@ import * as Schema from "effect/Schema";
 
 import { getLocalStorageItem, setLocalStorageItem } from "./hooks/useLocalStorage";
 
-export const CLIENT_SETTINGS_STORAGE_KEY = "t3code:client-settings:v1";
-export const SAVED_ENVIRONMENT_REGISTRY_STORAGE_KEY = "t3code:saved-environment-registry:v1";
-export const LEGACY_THEME_STORAGE_KEY = "t3code:theme";
+export const CLIENT_SETTINGS_STORAGE_KEY = "pipper:client-settings:v1";
+export const SAVED_ENVIRONMENT_REGISTRY_STORAGE_KEY = "pipper:saved-environment-registry:v1";
+export const LEGACY_THEME_STORAGE_KEY = "pipper:theme";
 
 const BrowserSavedEnvironmentRecordSchema = Schema.Struct({
   environmentId: EnvironmentId,

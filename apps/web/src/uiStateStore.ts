@@ -1,14 +1,14 @@
 import { Debouncer } from "@tanstack/react-pacer";
 import { create } from "zustand";
 
-export const PERSISTED_STATE_KEY = "t3code:ui-state:v1";
+export const PERSISTED_STATE_KEY = "pipper:ui-state:v1";
 const LEGACY_PERSISTED_STATE_KEYS = [
-  "t3code:renderer-state:v8",
-  "t3code:renderer-state:v7",
-  "t3code:renderer-state:v6",
-  "t3code:renderer-state:v5",
-  "t3code:renderer-state:v4",
-  "t3code:renderer-state:v3",
+  "pipper:renderer-state:v8",
+  "pipper:renderer-state:v7",
+  "pipper:renderer-state:v6",
+  "pipper:renderer-state:v5",
+  "pipper:renderer-state:v4",
+  "pipper:renderer-state:v3",
   "codething:renderer-state:v4",
   "codething:renderer-state:v3",
   "codething:renderer-state:v2",
@@ -31,6 +31,11 @@ export interface UiProjectState {
 export interface UiThreadState {
   threadLastVisitedAtById: Record<string, string>;
   threadChangedFilesExpandedById: Record<string, Record<string, boolean>>;
+  /**
+   * Thread keys (scoped) that the user has dismissed from the header tab bar.
+   * In-memory only — not persisted, so tabs reappear on page refresh.
+   */
+  dismissedHeaderThreadKeys: Record<string, true>;
 }
 
 export interface UiEndpointState {
@@ -57,6 +62,7 @@ const initialState: UiState = {
   projectOrder: [],
   threadLastVisitedAtById: {},
   threadChangedFilesExpandedById: {},
+  dismissedHeaderThreadKeys: {},
   defaultAdvertisedEndpointKey: null,
 };
 
@@ -636,6 +642,8 @@ interface UiStateStore extends UiState {
     draggedProjectIds: readonly string[],
     targetProjectIds: readonly string[],
   ) => void;
+  dismissHeaderThread: (threadKey: string) => void;
+  restoreHeaderThread: (threadKey: string) => void;
 }
 
 export const useUiStateStore = create<UiStateStore>((set) => ({
@@ -656,6 +664,21 @@ export const useUiStateStore = create<UiStateStore>((set) => ({
     set((state) => setProjectExpanded(state, projectId, expanded)),
   reorderProjects: (draggedProjectIds, targetProjectIds) =>
     set((state) => reorderProjects(state, draggedProjectIds, targetProjectIds)),
+  dismissHeaderThread: (threadKey) =>
+    set((state) => {
+      if (state.dismissedHeaderThreadKeys[threadKey]) return state;
+      return {
+        ...state,
+        dismissedHeaderThreadKeys: { ...state.dismissedHeaderThreadKeys, [threadKey]: true },
+      };
+    }),
+  restoreHeaderThread: (threadKey) =>
+    set((state) => {
+      if (!state.dismissedHeaderThreadKeys[threadKey]) return state;
+      const next = { ...state.dismissedHeaderThreadKeys };
+      delete next[threadKey];
+      return { ...state, dismissedHeaderThreadKeys: next };
+    }),
 }));
 
 useUiStateStore.subscribe((state) => debouncedPersistState.maybeExecute(state));

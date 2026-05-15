@@ -24,7 +24,7 @@ bunx @polarish/agent
 
 ### Desktop app
 
-Install the latest version of the desktop app from [GitHub Releases](https://github.com/pingdotgg/t3code/releases), or from your favorite package registry:
+Install the latest version of the desktop app from [GitHub Releases](https://github.com/maker-or/pipper/releases), or from your favorite package registry:
 
 #### Windows (`winget`)
 
@@ -41,7 +41,7 @@ brew install --cask t3-code
 #### Arch Linux (AUR)
 
 ```bash
-yay -S t3code-bin
+yay -S pipper-bin
 ```
 
 ## Some notes

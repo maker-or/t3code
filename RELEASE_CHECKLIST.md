@@ -18,7 +18,7 @@ Use this checklist before shipping a build to users.
 - [x] Final product name is decided and approved.
 - [ ] Final public brand is consistent across app, website, docs, and installers.
 - [ ] Any rename of the product has a migration plan for links, assets, and update feeds.
-- [x] Internal identifiers that are intentionally kept (`T3CODE_*`, `t3code`, package names, etc.) are documented.
+- [x] Internal identifiers that are intentionally kept (`T3CODE_*`, `pipper`, package names, etc.) are documented.
 
 ### Distribution
 
@@ -79,10 +79,10 @@ Use this checklist before shipping a build to users.
 
 - [ ] Decide whether internal prefixes stay the same:
   - [ ] `T3CODE_` env vars
-  - [ ] `t3code:` storage keys
-  - [ ] `t3code` executable name
-  - [ ] `com.t3tools.t3code` app ID
-  - [ ] `pingdotgg/t3code` GitHub repo references
+  - [ ] `pipper:` storage keys
+  - [ ] `pipper` executable name
+  - [ ] `com.t3tools.pipper` app ID
+  - [ ] `maker-or/pipper` GitHub repo references
 - [ ] If any internal name changes, migration / fallback support is implemented.
 
 ---
@@ -251,12 +251,12 @@ Run a repo-wide search for old brand strings and review every hit.
 ### Search terms to inspect
 
 - [ ] `T3 Code`
-- [ ] `t3code`
+- [ ] `pipper`
 - [ ] `T3`
 - [ ] `T3 Tools`
 - [ ] `T3CODE_`
-- [ ] `pingdotgg/t3code`
-- [ ] `com.t3tools.t3code`
+- [ ] `maker-or/pipper`
+- [ ] `com.t3tools.pipper`
 
 ### What to verify in each hit
 
@@ -292,16 +292,16 @@ Use this section to record final decisions.
 - Final public website name: `polarish`
 - Final app display name: `polarish`
 - Final desktop product name: `polarish` with channel suffixes like `polarish (Alpha)` and `polarish (Nightly)` where needed
-- Final repo name: currently still `pingdotgg/t3code` until a repo migration is planned
+- Final repo name: currently still `maker-or/pipper` until a repo migration is planned
 - Final package / store listing names: pending store-by-store migration decisions
 
 ### Internal names kept intentionally
 
 - `T3CODE_` env vars: keep for now to avoid breaking existing build/release automation
-- `t3code:` local storage keys: keep for now unless a storage migration is implemented
-- `t3code` executable / package name: mixed state today; CLI package is already `@polarish/agent`, desktop executable still needs an explicit migration decision
-- `com.t3tools.t3code` app ID: keep for now unless updater/install migration is designed and validated
-- GitHub repo slug: currently `pingdotgg/t3code`
+- `pipper:` local storage keys: keep for now unless a storage migration is implemented
+- `pipper` executable / package name: mixed state today; CLI package is already `@polarish/agent`, desktop executable still needs an explicit migration decision
+- `com.t3tools.pipper` app ID: keep for now unless updater/install migration is designed and validated
+- GitHub repo slug: currently `maker-or/pipper`
 
 ### Migration notes
 

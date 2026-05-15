@@ -29,6 +29,7 @@ export type MessagesTimelineRow =
       showAssistantCopyButton: boolean;
       assistantTurnDiffSummary?: TurnDiffSummary | undefined;
       revertTurnCount?: number | undefined;
+      completionTurnRows?: MessagesTimelineRow[] | undefined;
     }
   | {
       kind: "proposed-plan";
@@ -181,6 +182,40 @@ export function deriveMessagesTimelineRows(input: {
     });
   }
 
+  // Absorb all rows (intermediate assistant messages, work groups, proposed
+  // plans) preceding the completion-divider assistant message into that row so
+  // the UI can render them inside a collapsible accordion.  Walk backwards
+  // from the divider and stop at the first user message — that marks the turn
+  // boundary.
+  const dividerIndex = nextRows.findIndex(
+    (row) => row.kind === "message" && row.showCompletionDivider,
+  );
+  if (dividerIndex > 0) {
+    let absorptionStart = dividerIndex;
+
+    for (let i = dividerIndex - 1; i >= 0; i--) {
+      const row = nextRows[i];
+      if (!row) break;
+      // User messages mark the turn boundary — stop here.
+      if (row.kind === "message" && row.message.role === "user") break;
+      absorptionStart = i;
+    }
+
+    if (absorptionStart < dividerIndex) {
+      const absorbedRows = nextRows.slice(absorptionStart, dividerIndex);
+      nextRows.splice(absorptionStart, dividerIndex - absorptionStart);
+      const adjustedIndex = absorptionStart;
+      const dividerRow = nextRows[adjustedIndex] as Extract<
+        MessagesTimelineRow,
+        { kind: "message" }
+      >;
+      nextRows[adjustedIndex] = {
+        ...dividerRow,
+        completionTurnRows: absorbedRows,
+      };
+    }
+  }
+
   if (input.isWorking) {
     nextRows.push({
       kind: "working",
@@ -234,7 +269,8 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
         a.showCompletionDivider === bm.showCompletionDivider &&
         a.showAssistantCopyButton === bm.showAssistantCopyButton &&
         a.assistantTurnDiffSummary === bm.assistantTurnDiffSummary &&
-        a.revertTurnCount === bm.revertTurnCount
+        a.revertTurnCount === bm.revertTurnCount &&
+        a.completionTurnRows === bm.completionTurnRows
       );
     }
   }
