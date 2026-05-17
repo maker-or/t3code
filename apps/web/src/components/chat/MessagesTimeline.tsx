@@ -830,10 +830,9 @@ function AssistantChangedFilesSectionInner({
     <div className="mt-2 rounded-lg border border-border/80 bg-card/45 p-2.5">
       <div className="mb-1.5 flex items-center justify-between gap-2">
         <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/65">
-          <span>Changed files ({changedFileCountLabel})</span>
+          <span>Changed files {changedFileCountLabel}</span>
           {hasNonZeroStat(summaryStat) && (
             <>
-              <span className="mx-1">•</span>
               <DiffStatLabel additions={summaryStat.additions} deletions={summaryStat.deletions} />
             </>
           )}

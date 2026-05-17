@@ -2518,6 +2518,20 @@ export default function ChatView(props: ChatViewProps) {
       if (!activeThreadId || useCommandPaletteStore.getState().open || event.defaultPrevented) {
         return;
       }
+      if (event.key === "Escape" && phase === "running") {
+        event.preventDefault();
+        event.stopPropagation();
+        const api = readEnvironmentApi(environmentId);
+        if (api) {
+          void api.orchestration.dispatchCommand({
+            type: "thread.turn.interrupt",
+            commandId: newCommandId(),
+            threadId: activeThreadId,
+            createdAt: new Date().toISOString(),
+          });
+        }
+        return;
+      }
       const shortcutContext = {
         terminalFocus: isTerminalFocused(),
         terminalOpen: Boolean(terminalState.terminalOpen),
@@ -2600,6 +2614,8 @@ export default function ChatView(props: ChatViewProps) {
     splitTerminal,
     keybindings,
     onToggleDiff,
+    environmentId,
+    phase,
     toggleTerminalVisibility,
   ]);
 
@@ -2965,7 +2981,7 @@ export default function ChatView(props: ChatViewProps) {
     }
   };
 
-  const onInterrupt = async () => {
+  const onInterrupt = useCallback(async () => {
     const api = readEnvironmentApi(environmentId);
     if (!api || !activeThread) return;
     await api.orchestration.dispatchCommand({
@@ -2974,7 +2990,7 @@ export default function ChatView(props: ChatViewProps) {
       threadId: activeThread.id,
       createdAt: new Date().toISOString(),
     });
-  };
+  }, [activeThread, environmentId]);
 
   const onRespondToApproval = useCallback(
     async (requestId: ApprovalRequestId, decision: ProviderApprovalDecision) => {

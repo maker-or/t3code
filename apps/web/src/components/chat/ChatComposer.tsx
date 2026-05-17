@@ -154,8 +154,6 @@ const ComposerFooterModeControls = memo(function ComposerFooterModeControls(prop
 }) {
   return (
     <>
-      <Separator orientation="vertical" className="mx-0.5 hidden h-4 sm:block" />
-
       {/* Build/plan toggle hidden from UI for now.
       {props.showInteractionModeToggle ? (
         <>
@@ -1930,12 +1928,7 @@ export const ChatComposer = memo(
                 onTogglePlanSidebar={togglePlanSidebar}
               />
             )}
-            {footerControls ? (
-              <>
-                <Separator orientation="vertical" className="mx-0.5 hidden h-4 sm:block" />
-                {footerControls}
-              </>
-            ) : null}
+            {footerControls ? footerControls : null}
           </div>
           {activeContextWindow || isPreparingWorktree ? (
             <div

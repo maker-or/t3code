@@ -162,7 +162,6 @@ import {
   ThreadStatusPill,
 } from "./Sidebar.logic";
 import { sortThreads } from "../lib/threadSort";
-import { SidebarUpdatePill } from "./sidebar/SidebarUpdatePill";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import { CommandDialogTrigger } from "./ui/command";
 import { readEnvironmentApi } from "../environmentApi";
@@ -184,7 +183,6 @@ import {
   type SidebarProjectGroupMember,
   type SidebarProjectSnapshot,
 } from "../sidebarProjectGrouping";
-import { SidebarProviderUpdatePill } from "./sidebar/SidebarProviderUpdatePill";
 const THREAD_PREVIEW_LIMIT = 6;
 const SIDEBAR_SORT_LABELS: Record<SidebarProjectSortOrder, string> = {
   updated_at: "Last user message",
@@ -2767,8 +2765,6 @@ const CompactSidebarProjectRail = memo(function CompactSidebarProjectRail(props:
           })}
         </SidebarContent>
         <SidebarFooter className="w-full items-center p-2">
-          <SidebarProviderUpdatePill />
-          <SidebarUpdatePill />
           <Tooltip>
             <TooltipTrigger
               render={
