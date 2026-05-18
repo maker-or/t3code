@@ -616,6 +616,8 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       icon: "icon.ico",
     };
     if (signed) {
+      // Keep Azure Trusted Signing wired for later signed releases; unsigned launch builds
+      // deliberately avoid requiring Azure credentials by leaving --signed/T3CODE_DESKTOP_SIGNED off.
       winConfig.azureSignOptions = yield* AzureTrustedSigningOptionsConfig;
     } else {
       winConfig.signAndEditExecutable = false;
@@ -826,6 +828,9 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     }
   }
   if (!options.signed) {
+    // Initial public builds may be shipped unsigned while Apple Developer / Azure Trusted
+    // Signing credentials are unavailable. Do not remove the signed path above; pass
+    // --signed or T3CODE_DESKTOP_SIGNED=true later to re-enable signing/notarization.
     buildEnv.CSC_IDENTITY_AUTO_DISCOVERY = "false";
     delete buildEnv.CSC_LINK;
     delete buildEnv.CSC_KEY_PASSWORD;

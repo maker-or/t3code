@@ -217,8 +217,8 @@ Use this checklist before shipping a build to users.
 - [ ] Desktop tests pass.
 - [ ] Desktop smoke test passes.
 - [ ] App icon assets are present and correct.
-- [ ] macOS artifact is signed / notarized if required.
-- [ ] Windows artifact is signed if required.
+- [ ] macOS artifact is signed / notarized if required; initial launch may ship unsigned until Apple credentials are available.
+- [ ] Windows artifact is signed if required; initial launch may ship unsigned until Azure Trusted Signing is available.
 - [ ] Linux artifact launches correctly.
 
 ### Marketing build
@@ -302,6 +302,12 @@ Use this section to record final decisions.
 - `pipper` executable / package name: mixed state today; CLI package is already `@polarish/agent`, desktop executable still needs an explicit migration decision
 - `com.t3tools.pipper` app ID: keep for now unless updater/install migration is designed and validated
 - GitHub repo slug: currently `maker-or/pipper`
+
+### Signing / distribution decision
+
+- Initial launch can ship unsigned on macOS and Windows because Apple Developer / Azure Trusted Signing credentials are not available yet.
+- Keep signing code in place: `scripts/build-desktop-artifact.ts --signed` / `T3CODE_DESKTOP_SIGNED=true` re-enables macOS signing/notarization discovery and Windows Azure Trusted Signing when credentials are ready.
+- Unsigned default is intentional: without `--signed`, the build disables Electron CSC auto-discovery and removes Apple signing env vars from the staged builder environment.
 
 ### Migration notes
 
