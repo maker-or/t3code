@@ -2,11 +2,13 @@
 interface Props {
     title?: string;
     description?: string;
+    pageClass?: string;
 }
 
 const {
     title = "pipper",
     description = "pipper — Better Interface for your agent.",
+    pageClass,
 } = Astro.props;
 ---
 
@@ -37,7 +39,7 @@ const {
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <title>{title}</title>
     </head>
-    <body>
+    <body class={pageClass}>
         <div class="page">
             <header class="w-full max-w-7xl mx-auto px-8 pt-6 md:pt-10 flex justify-between items-center flex-shrink-0">
                 <a href="/" class="font-['Averia_Serif_Libre'] italic text-3xl md:text-4xl tracking-tight text-[#5474AF] hover:opacity-80 transition-opacity">

@@ -1,0 +1,25 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Downloads — polarish" description="Download polarish for macOS, Windows, or Linux.">
+  <meta http-equiv="refresh" content="0; url=/download" />
+  <p class="redirect-copy">
+    Redirecting to <a href="/download">polarish downloads</a>&hellip;
+  </p>
+</Layout>
+
+<style>
+  .redirect-copy {
+    min-height: 50vh;
+    display: grid;
+    place-items: center;
+    color: var(--fg-dim);
+  }
+
+  .redirect-copy a {
+    color: var(--fg);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+</style>
