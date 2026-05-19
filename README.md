@@ -22,28 +22,6 @@ npx @polarish/agent
 bunx @polarish/agent
 ```
 
-### Desktop app
-
-Install the latest version of the desktop app from [GitHub Releases](https://github.com/maker-or/pipper/releases), or from your favorite package registry:
-
-#### Windows (`winget`)
-
-```bash
-winget install T3Tools.T3Code
-```
-
-#### macOS (Homebrew)
-
-```bash
-brew install --cask t3-code
-```
-
-#### Arch Linux (AUR)
-
-```bash
-yay -S pipper-bin
-```
-
 ## Some notes
 
 We are very very early in this project. Expect bugs.
@@ -52,16 +30,4 @@ We are not accepting contributions yet.
 
 Observability guide: [docs/observability.md](./docs/observability.md)
 
-## If you REALLY want to contribute still.... read this first
-
-Before local development, prepare the environment and install dependencies:
-
-```bash
-# Optional: only needed if you use mise for dev tool management.
-mise install
-bun install .
-```
-
-Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening an issue or PR.
-
-Need support? Join the [Discord](https://discord.gg/jn4EGJjrvv).
+Need support? Join the [Discord](https://discord.gg/S928NjYv).

@@ -237,7 +237,7 @@ Use this checklist before shipping a build to users.
 - [ ] Winget package name is correct.
 - [ ] Homebrew cask name is correct.
 - [ ] AUR package name is correct.
-- [ ] Discord invite link is correct.
+- [x] Discord invite link is correct: https://discord.gg/S928NjYv
 - [ ] Any hosted app URL is correct.
 - [ ] Any pairing URL / hosted URL references are correct.
 - [ ] Any public docs or blog links are correct.
