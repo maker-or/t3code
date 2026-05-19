@@ -1,0 +1,106 @@
+name: Build Desktop Unsigned
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Build version. Leave empty to use the package version."
+        required: false
+        type: string
+      platform:
+        description: "Desktop platform"
+        required: true
+        default: mac
+        type: choice
+        options:
+          - mac
+          - linux
+          - win
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.label }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: macOS arm64
+            platform: mac
+            target: dmg
+            arch: arm64
+            runner: macos-latest
+          - label: macOS x64
+            platform: mac
+            target: dmg
+            arch: x64
+            runner: macos-latest
+          - label: Linux x64
+            platform: linux
+            target: AppImage
+            arch: x64
+            runner: ubuntu-24.04
+          - label: Windows x64
+            platform: win
+            target: nsis
+            arch: x64
+            runner: windows-latest
+    if: ${{ github.event.inputs.platform == matrix.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - id: build_version
+        name: Resolve build version
+        shell: bash
+        run: |
+          version="${{ github.event.inputs.version }}"
+          if [[ -z "$version" ]]; then
+            version="$(node -e "const fs=require('node:fs'); console.log(JSON.parse(fs.readFileSync('apps/server/package.json', 'utf8')).version)")"
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Align package versions
+        run: node scripts/update-release-package-versions.ts "${{ steps.build_version.outputs.value }}"
+
+      - name: Build unsigned desktop artifact
+        shell: bash
+        run: |
+          bun run dist:desktop:artifact -- \
+            --platform "${{ matrix.platform }}" \
+            --target "${{ matrix.target }}" \
+            --arch "${{ matrix.arch }}" \
+            --build-version "${{ steps.build_version.outputs.value }}" \
+            --verbose
+
+      - name: Upload desktop artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-${{ matrix.platform }}-${{ matrix.arch }}-${{ steps.build_version.outputs.value }}
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.AppImage
+            release/*.exe
+            release/*.blockmap
+            release/*.yml
+          if-no-files-found: error
