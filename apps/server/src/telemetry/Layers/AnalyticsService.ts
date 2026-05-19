@@ -7,7 +7,7 @@
  * @module AnalyticsServiceLive
  */
 
-import { Config, DateTime, Effect, Layer, Ref } from "effect";
+import { Config, DateTime, Effect, Layer, Option, Ref } from "effect";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http";
 
 import { ServerConfig } from "../../config.ts";
@@ -22,9 +22,7 @@ interface BufferedAnalyticsEvent {
 }
 
 const TelemetryEnvConfig = Config.all({
-  posthogKey: Config.string("T3CODE_POSTHOG_KEY").pipe(
-    Config.withDefault("phc_XOWci4oZP4VvLiEyrFqkFjP4CZn55mjYYBMREK5Wd6m"),
-  ),
+  posthogKey: Config.string("T3CODE_POSTHOG_KEY").pipe(Config.option),
   posthogHost: Config.string("T3CODE_POSTHOG_HOST").pipe(
     Config.withDefault("https://us.i.posthog.com"),
   ),
@@ -73,10 +71,11 @@ const makeAnalyticsService = Effect.gen(function* () {
   const sendBatch = Effect.fn("sendBatch")(function* (
     events: ReadonlyArray<BufferedAnalyticsEvent>,
   ) {
-    if (!telemetryConfig.enabled || !identifier) return;
+    if (!telemetryConfig.enabled || !identifier || Option.isNone(telemetryConfig.posthogKey))
+      return;
 
     const payload = {
-      api_key: telemetryConfig.posthogKey,
+      api_key: Option.getOrUndefined(telemetryConfig.posthogKey),
       batch: events.map((event) => ({
         event: event.event,
         distinct_id: identifier,
@@ -127,7 +126,8 @@ const makeAnalyticsService = Effect.gen(function* () {
 
   const record: AnalyticsServiceShape["record"] = Effect.fn("record")(
     function* (event, properties) {
-      if (!telemetryConfig.enabled || !identifier) return;
+      if (!telemetryConfig.enabled || !identifier || Option.isNone(telemetryConfig.posthogKey))
+        return;
 
       const enqueueResult = yield* enqueueBufferedEvent(event, properties);
       if (enqueueResult.dropped) {

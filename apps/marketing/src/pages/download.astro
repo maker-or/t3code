@@ -76,10 +76,27 @@ import { RELEASES_URL } from "../lib/releases";
 
 <script>
   import { fetchLatestRelease, RELEASES_URL } from "../lib/releases";
+  import { trackPosthogEvent } from "../lib/posthog";
 
   async function init() {
+    trackPosthogEvent("marketing.download.page_viewed", {
+      page: "download",
+      pagePath: "/download",
+    });
+
     const versionLabel = document.getElementById("version-label");
     const cards = document.querySelectorAll<HTMLAnchorElement>(".download-card");
+    cards.forEach((card) => {
+      card.addEventListener("click", () => {
+        trackPosthogEvent("marketing.download.button_clicked", {
+          buttonId: card.dataset.asset || "unknown",
+          buttonLabel: card.textContent?.replace(/\s+/g, " ").trim() || "Download",
+          href: card.href,
+          page: "download",
+          pagePath: "/download",
+        });
+      });
+    });
 
     try {
       const release = await fetchLatestRelease();
