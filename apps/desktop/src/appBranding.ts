@@ -2,7 +2,7 @@ import type { DesktopAppBranding, DesktopAppStageLabel } from "@t3tools/contract
 
 import { isNightlyDesktopVersion } from "./updateChannels.ts";
 
-const APP_BASE_NAME = "Fuck Code";
+const APP_BASE_NAME = "polarish";
 
 export function resolveDesktopAppStageLabel(input: {
   readonly isDevelopment: boolean;
