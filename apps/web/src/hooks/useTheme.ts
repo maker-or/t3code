@@ -126,13 +126,13 @@ export function applyTheme(
     document.documentElement.classList.add("no-transitions");
   }
   const isDark = theme === "dark" || (theme === "system" && getSystemDark());
-  document.documentElement.classList.toggle("dark", isDark);
-  document.documentElement.dataset.appearanceMode = theme;
-  document.documentElement.style.setProperty("--accent-hue", `${clampHue(accentHue)}`);
-  document.documentElement.style.setProperty(
-    "--accent-intensity",
-    clampIntensity(accentIntensity).toFixed(3),
-  );
+  const root = document.documentElement;
+  root.classList?.toggle("dark", isDark);
+  if (root.dataset) {
+    root.dataset.appearanceMode = theme;
+  }
+  root.style?.setProperty("--accent-hue", `${clampHue(accentHue)}`);
+  root.style?.setProperty("--accent-intensity", clampIntensity(accentIntensity).toFixed(3));
   syncBrowserChromeTheme();
   syncDesktopTheme(theme);
   if (suppressTransitions) {

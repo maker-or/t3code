@@ -43,6 +43,18 @@ function hasWindow(): boolean {
   return typeof window !== "undefined";
 }
 
+function getBrowserLocalStorage(): Storage | null {
+  if (!hasWindow()) {
+    return null;
+  }
+
+  try {
+    return window.localStorage ?? globalThis.localStorage ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function toPersistedSavedEnvironmentRecord(
   record: PersistedSavedEnvironmentRecord,
 ): PersistedSavedEnvironmentRecord {
@@ -58,7 +70,7 @@ function toPersistedSavedEnvironmentRecord(
 }
 
 export function readBrowserClientSettings(): ClientSettings | null {
-  if (!hasWindow()) {
+  if (!getBrowserLocalStorage()) {
     return null;
   }
 
@@ -70,7 +82,7 @@ export function readBrowserClientSettings(): ClientSettings | null {
 }
 
 export function writeBrowserClientSettings(settings: ClientSettings): void {
-  if (!hasWindow()) {
+  if (!getBrowserLocalStorage()) {
     return;
   }
 
@@ -78,16 +90,21 @@ export function writeBrowserClientSettings(settings: ClientSettings): void {
 }
 
 export function readLegacyBrowserThemePreference(): "light" | "dark" | "system" | null {
-  if (!hasWindow()) {
+  const localStorage = getBrowserLocalStorage();
+  if (!localStorage) {
     return null;
   }
 
-  const raw = window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
-  return raw === "light" || raw === "dark" || raw === "system" ? raw : null;
+  try {
+    const raw = localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
+    return raw === "light" || raw === "dark" || raw === "system" ? raw : null;
+  } catch {
+    return null;
+  }
 }
 
 function readBrowserSavedEnvironmentRegistryDocument(): BrowserSavedEnvironmentRegistryDocument {
-  if (!hasWindow()) {
+  if (!getBrowserLocalStorage()) {
     return {};
   }
 
@@ -105,7 +122,7 @@ function readBrowserSavedEnvironmentRegistryDocument(): BrowserSavedEnvironmentR
 function writeBrowserSavedEnvironmentRegistryDocument(
   document: BrowserSavedEnvironmentRegistryDocument,
 ): void {
-  if (!hasWindow()) {
+  if (!getBrowserLocalStorage()) {
     return;
   }
 

@@ -103,8 +103,8 @@ const ChatEnvironmentIdThreadIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof ChatIndexRoute
-  '/pair': typeof PairRoute
   '/download': typeof DownloadRoute
+  '/pair': typeof PairRoute
   '/settings': typeof SettingsRouteWithChildren
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/archived': typeof SettingsArchivedRoute
@@ -118,8 +118,8 @@ export interface FileRoutesByFullPath {
   '/draft/$draftId': typeof ChatDraftDraftIdRoute
 }
 export interface FileRoutesByTo {
-  '/pair': typeof PairRoute
   '/download': typeof DownloadRoute
+  '/pair': typeof PairRoute
   '/settings': typeof SettingsRouteWithChildren
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/archived': typeof SettingsArchivedRoute
@@ -136,8 +136,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_chat': typeof ChatRouteWithChildren
-  '/pair': typeof PairRoute
   '/download': typeof DownloadRoute
+  '/pair': typeof PairRoute
   '/settings': typeof SettingsRouteWithChildren
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/archived': typeof SettingsArchivedRoute
@@ -155,8 +155,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/pair'
     | '/download'
+    | '/pair'
     | '/settings'
     | '/settings/appearance'
     | '/settings/archived'
@@ -170,8 +170,8 @@ export interface FileRouteTypes {
     | '/draft/$draftId'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/pair'
     | '/download'
+    | '/pair'
     | '/settings'
     | '/settings/appearance'
     | '/settings/archived'
@@ -187,8 +187,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_chat'
-    | '/pair'
     | '/download'
+    | '/pair'
     | '/settings'
     | '/settings/appearance'
     | '/settings/archived'
@@ -205,8 +205,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   ChatRoute: typeof ChatRouteWithChildren
-  PairRoute: typeof PairRoute
   DownloadRoute: typeof DownloadRoute
+  PairRoute: typeof PairRoute
   SettingsRoute: typeof SettingsRouteWithChildren
 }
 
@@ -362,8 +362,8 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   ChatRoute: ChatRouteWithChildren,
-  PairRoute: PairRoute,
   DownloadRoute: DownloadRoute,
+  PairRoute: PairRoute,
   SettingsRoute: SettingsRouteWithChildren,
 }
 export const routeTree = rootRouteImport
